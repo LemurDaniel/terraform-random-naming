@@ -164,6 +164,7 @@ Azure:
    #/////////////////////////////////////////////////////////////////////////
    #//// DevOps
    Microsoft.Dashboard/grafana::default: amg
+   Microsoft.DevOpsInfrastructure/pools::default: mdp
 
    #/////////////////////////////////////////////////////////////////////////
    #//// Integration
@@ -287,8 +288,10 @@ Azure:
    #//// Storage
    Microsoft.DataProtection/backupVaults::default: bvault
    Microsoft.DataProtection/backupVaults/backupPolicies::default: bkpol
+   Microsoft.DataProtection/resourceGuards::default: rgd
    Microsoft.Storage/storageAccounts/fileServices/shares::default: share
    Microsoft.Storage/storageAccounts::default: st
+   Microsoft.Storage/storageAccounts::vm: stvm
    Microsoft.StorageSync/storageSyncServices::default: sss
 
 
