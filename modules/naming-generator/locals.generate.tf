@@ -16,9 +16,9 @@ locals {
         !component.isUniqueId && component.isParameter ? lookup(local.parameters, component.paramName, null) : null,
 
         # When Parameter and required, return the parameter value
-        !component.isUniqueId && component.isParameter && component.isRequired ? local.parameters[component.paramName] : null,
+        !component.isUniqueId && component.isParameter ? local.parameters[component.paramName] : null,
       ]...)
-    }
+    } if(component.isRequired || (!component.isRequired && lookup(local.parameters, component.paramName, null) != null))
   ]
 
   name_formatted = [

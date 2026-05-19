@@ -159,7 +159,7 @@ Patterns are strings with placeholder tokens replaced at evaluation time:
 | Syntax | Behavior |
 |---|---|
 | `<PARAMETER>` | Required — fails if the parameter is missing |
-| `<?PARAMETER>` | Optional — omitted silently if not provided |
+| `<?PARAMETER;-%s>` | Optional — omitted silently if not provided |
 | `<PARAMETER;%02s>` | Format string — uses printf-style formatting |
 
 **Special tokens:**
@@ -304,7 +304,7 @@ mappings:
 #
 # Tokens:
 #   <PARAMETER>        Required — fails if missing
-#   <?PARAMETER>       Optional — omitted if not provided
+#   <?PARAMETER;-%s>   Optional — omitted if not provided
 #   <PARAMETER;%02s>   Printf-style format string
 #   <TYPE>             Resolved abbreviation
 #   <LOCATION>         Mapped location short code

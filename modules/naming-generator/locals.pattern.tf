@@ -53,7 +53,7 @@ locals {
       raw   = component.raw
       value = component.value
 
-      paramName   = lower(split(";", component.value)[0])
+      paramName   = replace(lower(split(";", component.value)[0]), "?", "")
       paramFormat = strcontains(component.value, ";") ? split(";", component.value)[1] : "%s"
 
       isRequired  = component.isRequired
