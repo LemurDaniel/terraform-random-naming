@@ -18,8 +18,9 @@ variable "naming" {
     index_modifier     = number
     enforce_lower_case = any
 
-    mappings = map(map(string))
-    patterns = any
+    mappings      = map(map(string))
+    patterns      = any
+    abbreviations = any
 
     default_parameters = optional(map(any))
   })
@@ -31,11 +32,4 @@ variable "parameters" {
   description = "(Required) The default parameters to use for the schema."
   type        = map(any)
   default     = {}
-}
-
-variable "abbreviations" {
-  nullable    = true
-  description = "(Optional) The abbreviations to use for the schema."
-  type        = map(map(string))
-  default     = null
 }

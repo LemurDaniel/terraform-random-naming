@@ -102,9 +102,44 @@ output "vm_names" {
 
 ## ⚙️ How It Works
 
-### Resource Identifier Format
+<details>
+<summary><strong>🧩 How to use</strong> — declare the central naming module once, reference it in all configurations</summary>
 
-Every `naming-generator` call takes a `resource` string in the format:
+<br>
+
+Declare a single `naming-schema` module in your root configuration. It loads the YAML schema (patterns, mappings, abbreviations, and settings — all in one file) once, and acts as the source of truth for every `naming-generator` call across the project.
+
+```hcl
+# root module: declare ONCE
+module "schema" {
+  source = "./modules/naming-schema"
+
+  naming = yamldecode(file("${path.root}/default.naming.yaml"))
+  parameters = {
+    location    = "westeurope"
+    environment = "development"
+    name        = "myapp"
+  }
+}
+```
+
+Then pass `module.schema` to every `naming-generator` in your configuration:
+
+```hcl
+module "rg_naming" {
+  source   = "./modules/naming-generator"
+  schema   = module.schema
+  resource = "Azure::Microsoft.Resources/resourceGroups"
+}
+
+module "storage_naming" {
+  source   = "./modules/naming-generator"
+  schema   = module.schema
+  resource = "Azure::Microsoft.Storage/storageAccounts"
+}
+```
+
+**Resource identifier format** — every `naming-generator` call expects a `resource` string in this shape:
 
 ```
 Provider::Namespace/Type::kind
@@ -121,40 +156,18 @@ resource = "Azure::Microsoft.Compute/disks::os"
 resource = "Azure::Microsoft.Storage/storageAccounts"   # kind defaults to "default"
 ```
 
-### Abbreviation Resolution
+To swap conventions between environments, just point `naming` at a different YAML file — no resource code changes required.
 
-For each `resource` string the module looks up the abbreviation in this order — first match wins:
+</details>
 
-```
-type::id   →   type::kind   →   type::default   →   type
-```
+<details>
+<summary><strong>🎨 Define your patterns</strong></summary>
 
-```yaml
-# default.abbreviations.yaml
-Azure:
-  Microsoft.Compute/disks::os:      osdsk
-  Microsoft.Compute/disks::data:    datadsk
-  Microsoft.Compute/disks::default: disk
+<br>
 
-  # Same resource type, different abbreviation per kind
-  Microsoft.Web/sites::default:     app
-  Microsoft.Web/sites::function:    func
-```
+Patterns are strings with placeholder tokens that get substituted at evaluation time.
 
-Pass `naming_id` to select an abbreviation (and pattern) by a specific identifier instead of kind:
-
-```hcl
-module "hub_vnet" {
-  source     = "./modules/naming-generator"
-  schema     = module.schema
-  resource   = "Azure::Microsoft.Network/virtualNetworks"
-  naming_id  = "hub"   # matches type::hub before falling back to type::kind
-}
-```
-
-### Pattern Syntax
-
-Patterns are strings with placeholder tokens replaced at evaluation time:
+**Token syntax:**
 
 | Syntax | Behavior |
 |---|---|
@@ -162,18 +175,35 @@ Patterns are strings with placeholder tokens replaced at evaluation time:
 | `<?PARAMETER;-%s>` | Optional — omitted silently if not provided |
 | `<PARAMETER;%02s>` | Format string — uses printf-style formatting |
 
+> [!IMPORTANT]
+> **Put separators _inside_ the optional placeholder.**
+>
+> The format string after `;` is what gets rendered when the parameter is present — and dropped completely when it is missing. So a leading `-` (or `_`, `.`, etc.) inside the format becomes part of the optional segment:
+>
+> ```yaml
+> # ✅ Correct — the leading "-" disappears together with SUBNAME
+> default: "<TYPE>-<NAME><?SUBNAME;-%s>-<INDEX;%02s>"
+> #                       └──────┬──────┘
+> #                              └─ entire "-<value>" is dropped when SUBNAME is empty
+>
+> # With SUBNAME="api"  →  app-myapp-api-01
+> # Without SUBNAME     →  app-myapp-01     (no stray dash)
+>
+> # ❌ Wrong — leaves a stray "-" when SUBNAME is missing
+> default: "<TYPE>-<NAME>-<?SUBNAME;%s>-<INDEX;%02s>"
+> # Without SUBNAME     →  app-myapp--01  (double dash!)
+> ```
+
 **Special tokens:**
 
 | Token | Description |
 |---|---|
 | `<TYPE>` | Resolved abbreviation for the resource type |
-| `<NAMING_ID>` | The ID or fallback to Kind on the current naming call |
+| `<NAMING_ID>` | The ID, or fallback to Kind on the current naming call |
 | `<INDEX;format>` | Numeric index, incremented across the index range |
 | `<UNIQUE_ID_n>` | First `n` characters of a random UUID (e.g. `<UNIQUE_ID_4>`) |
 
-### Pattern Resolution
-
-The module searches the schema patterns in this order — first match wins:
+**Pattern resolution order** — first match wins:
 
 ```
 resourceType.id  →  resourceType.kind  →  resourceType.default  →  provider default  →  global default  →  error
@@ -202,9 +232,7 @@ patterns:
       default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
 ```
 
-### Lowercase Enforcement
-
-Controlled globally or per resource type. Provider-level settings take precedence over the global default:
+**Lowercase enforcement** — controlled globally or per resource type. Provider-level entries override the global default. Wildcard matching is supported (`azurerm*` matches all `azurerm_` types):
 
 ```yaml
 enforce_lower_case:
@@ -216,79 +244,75 @@ enforce_lower_case:
     storage_account: true
 ```
 
-Wildcard matching is supported — `azurerm*` matches all `azurerm_` resource types.
-
-### Value Mappings
-
-Full location and environment names are mapped to short codes before being inserted into the pattern. Matching is case-insensitive:
-
-```yaml
-mappings:
-  location:
-    westeurope:           euwe
-    West Europe:          euwe
-    germanywestcentral:   gewc
-    Germany West Central: gewc
-
-  environment:
-    development: dev
-    staging:     stg
-    production:  prod
-```
-
-Any parameter passed to `naming-generator` is automatically mapped if a matching entry exists. Unmapped values are used as-is.
-
-### Index Modifier
-
-`index_modifier` shifts the numeric index before formatting. With `index_modifier: 1` and `index.start: 0`, the first generated name carries index `01` instead of `00`:
+**Index modifier** — shifts the numeric index before formatting. With `index_modifier: 1` and `index.start: 0`, the first generated name carries index `01` instead of `00`:
 
 ```yaml
 index_modifier: 1
 ```
 
----
+</details>
 
-## 🗺️ Schema at a Glance
+<details>
+<summary><strong>🔤 Define your abbreviations</strong></summary>
 
-A naming schema is a plain YAML file — pass it via `yamldecode(file(...))` or replace it entirely with a different file per environment without changing any module code.
+<br>
+
+Abbreviations live under the `abbreviations:` top-level key of the same naming schema YAML and map resource types to short codes used in the `<TYPE>` token. The default set is CAF-aligned and ships with the module — you can override individual entries or add your own provider namespaces alongside `Azure`.
+
+**Abbreviation resolution order** — first match wins:
+
+```
+type::id   →   type::kind   →   type::default   →   type
+```
 
 ```yaml
-#
-# ################################################################################################
-# ## (Optional) Define default parameters applied to every name generation.
+# default.naming.yaml
+abbreviations:
+  Azure:
+    Microsoft.Compute/disks::os:      osdsk
+    Microsoft.Compute/disks::data:    datadsk
+    Microsoft.Compute/disks::default: disk
 
-default_parameters:
+    # Same resource type, different abbreviation per kind
+    Microsoft.Web/sites::default:     app
+    Microsoft.Web/sites::function:    func
 
-#
-# ################################################################################################
-# ## Define general settings.
+    # Storage account with explicit variant for VMs
+    Microsoft.Storage/storageAccounts::default: st
+    Microsoft.Storage/storageAccounts::vm:      stvm
+```
 
-# Shifts the numeric index before formatting.
-# index_modifier: 1  →  index.start = 0 produces "01", not "00"
-index_modifier: 1
+**Picking a variant with `naming_id`** — pass `naming_id` to select an abbreviation by a specific identifier instead of kind. This takes precedence over the kind from the resource string:
 
-# Enforce lowercase output globally or per resource type.
-# Provider-level entries override the global default.
-# Wildcard matching supported (e.g. azurerm* matches all azurerm_ types).
-enforce_lower_case:
-  default: true
+```hcl
+module "hub_vnet" {
+  source    = "./modules/naming-generator"
+  schema    = module.schema
+  resource  = "Azure::Microsoft.Network/virtualNetworks"
+  naming_id = "hub"   # matches type::hub before falling back to type::kind
+}
+```
 
-  azurerm:
-    default: false
-    container_registry: true
-    storage_account: true
+</details>
 
-#
-# ################################################################################################
-# ## Define mappings — full names are replaced by short codes before pattern substitution.
+<details>
+<summary><strong>🗺️ Define your mappings</strong></summary>
 
+<br>
+
+Mappings translate full names (e.g. `West Europe`) to short codes (`euwe`) before they are inserted into the pattern. Matching is **case-insensitive**, so `westeurope` and `West Europe` resolve identically.
+
+```yaml
 mappings:
   location:
     global:               glob
+
     westeurope:           euwe
     West Europe:          euwe
+
     germanynorth:         geno
     Germany North:        geno
+
     germanywestcentral:   gewc
     Germany West Central: gewc
 
@@ -297,42 +321,8 @@ mappings:
     staging:     stg
     test:        tst
     production:  prod
-
-#
-# ################################################################################################
-# ## Define patterns per provider / resource type.
-#
-# Tokens:
-#   <PARAMETER>        Required — fails if missing
-#   <?PARAMETER;-%s>   Optional — omitted if not provided
-#   <PARAMETER;%02s>   Printf-style format string
-#   <TYPE>             Resolved abbreviation
-#   <LOCATION>         Mapped location short code
-#   <ENVIRONMENT>      Mapped environment short code
-#   <NAME>             Application / workload name
-#   <INDEX;%02s>       Numeric index with formatting
-#   <UNIQUE_ID_n>      First n characters of a random UUID
-#
-# Pattern resolution order:
-#   resourceType.id → resourceType.kind → resourceType.default → provider default → global default → error
-
-patterns:
-  # Global fallback
-  default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
-
-  Azure:
-    # Provider fallback
-    default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.ContainerRegistry/registries:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    # Kind-based patterns — selected by ::kind or naming_id
-    Microsoft.Compute/disks:
-      os:   "<TYPE>-<NAME>-<ENVIRONMENT>"
-      data: "<TYPE><INDEX;%02s>-<NAME>-<ENVIRONMENT>"
-
-    # No separators for storage account names (Azure character restrictions)
-    Microsoft.Storage/storageAccounts:
-      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
 ```
+
+Any parameter passed to `naming-generator` is automatically mapped if a matching entry exists. Unmapped values are used as-is, so you can add new parameter categories (e.g. `tier`, `region_group`) without changing any code — just define the mapping in YAML and reference it from a pattern via the matching `<TOKEN>`.
+
+</details>

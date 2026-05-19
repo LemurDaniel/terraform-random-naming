@@ -33,7 +33,7 @@ locals {
 
   name_final = [
     for name in local.name_formatted :
-    local.enforce_lower_case ? lower(join("", compact(name))) : join("", compact(name))
+    local.enforce_lower_case ? replace(lower(join("", compact(name))), "--", "-") :  replace(join("", compact(name)), "--", "-")
   ]
 
 }

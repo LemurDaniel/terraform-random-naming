@@ -1,10 +1,7 @@
 
 locals {
-  parent_path = abspath(format("%s/convention/%s/%s", path.module, var.convention, var.convention))
-
-
-  default_abbreviations = yamldecode(file(format("%s.abbreviations.yaml", local.parent_path)))
-  default_naming        = yamldecode(file(format("%s.naming.yaml", local.parent_path)))
+  parent_path    = abspath(format("%s/convention/%s.naming.yaml", path.module, var.convention))
+  default_naming = yamldecode(file(local.parent_path))
 
   # This is to bypass consistent-type errors with coalesce and inline-if.
   naming = [
@@ -39,7 +36,7 @@ output "enforce_lower_case" {
 
 output "abbreviations" {
   description = "Output the resources part of the schema."
-  value       = coalesce(var.abbreviations, local.default_abbreviations)
+  value       = coalesce(local.naming.abbreviations, {})
 }
 
 output "mappings" {
