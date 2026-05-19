@@ -16,10 +16,14 @@ locals {
   pattern_selected = coalesce([
     // Match to <resourceType>.<id>
     lookup(lookup(local.patterns_provider, local.resource.type, {}), var.naming_id, null),
-    // Match to <resourceType>.<kind> OR <resourceType>.default
+    // Match to <resourceType>.<kind>
     lookup(lookup(local.patterns_provider, local.resource.type, {}), local.resource.kind, null),
-    // Match to default
+    // Match to <resourceType>.default
+    lookup(lookup(local.patterns_provider, local.resource.type, {}), "default", null),
+    // Match to Provider default
     lookup(local.patterns_provider, "default", null),
+    // Fallback to global default
+    var.schema.patterns.default
   ]...)
 
 

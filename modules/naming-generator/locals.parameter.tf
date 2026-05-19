@@ -21,7 +21,7 @@ locals {
     # This is used for
     # - mapping to the correct abbreviation in default.abbreviations.yaml
     # - (optional) define additional patterns only for that subkind in default.naming.yaml
-    kind = length(split("::", var.resource)) > 1 ? split("::", var.resource)[2] : "default"
+    kind = length(split("::", var.resource)) > 2 ? split("::", var.resource)[2] : "default"
   }
 
 

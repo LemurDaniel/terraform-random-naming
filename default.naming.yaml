@@ -17,6 +17,61 @@ enforce_lower_case:
     default: false
     container_registry: true
     storage_account: true
+    key_vault: true
+    dns_zone: true
+    private_dns_zone: true
+
+#
+# ################################################################################################
+# ## Define the patterns for generating names.
+
+patterns:
+  default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
+
+  Azure:
+    default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME><?SUBNAME;-%s>-<INDEX;%02s>"
+
+    # ----- Compute / Web ---------------------------------------------------
+    # Windows VM names are limited to 15 characters - keep the pattern tight.
+    Microsoft.Compute/virtualMachines:
+      default: "<TYPE><ENVIRONMENT><NAME><INDEX;%02s>"
+      # <name_id>: "<pattern>"
+      # <name_kind>: "<pattern>"
+      
+    # ----- Containers ------------------------------------------------------
+    # Container Registry: 5-50 chars, alphanumeric only (no hyphens).
+    Microsoft.ContainerRegistry/registries:
+      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+
+    # ----- Management / Governance -----------------------------------------
+    Microsoft.Resources/resourceGroups:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    # ----- Networking ------------------------------------------------------
+    Microsoft.Network/virtualNetworks:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/virtualNetworks/subnets:
+      default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/publicIPAddresses:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/networkSecurityGroups:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    # ----- Security --------------------------------------------------------
+    # Key Vault: 3-24 chars, must start with letter, alphanumeric + hyphens.
+    Microsoft.KeyVault/vaults:
+      default: "<TYPE>-<ENVIRONMENT>-<NAME>-<UNIQUE_ID_4>"
+
+    # ----- Storage ---------------------------------------------------------
+    # Storage account: 3-24 chars, alphanumeric only (no hyphens), lowercase.
+    Microsoft.Storage/storageAccounts:
+      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+      vm_pattern: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+      # <name_id>: "<pattern>"
+      # <name_kind>: "<pattern>"
 
 #
 # ################################################################################################
@@ -27,8 +82,12 @@ mappings:
   location:
     global: glob
 
+    # Europe
     westeurope: euwe
     West Europe: euwe
+
+    northeurope: euno
+    North Europe: euno
 
     germanynorth: geno
     Germany North: geno
@@ -36,27 +95,98 @@ mappings:
     germanywestcentral: gewc
     Germany West Central: gewc
 
+    francecentral: frce
+    France Central: frce
+
+    francesouth: frso
+    France South: frso
+
+    switzerlandnorth: chno
+    Switzerland North: chno
+
+    switzerlandwest: chwe
+    Switzerland West: chwe
+
+    norwayeast: noea
+    Norway East: noea
+
+    norwaywest: nowe
+    Norway West: nowe
+
+    swedencentral: sece
+    Sweden Central: sece
+
+    polandcentral: plce
+    Poland Central: plce
+
+    italynorth: itno
+    Italy North: itno
+
+    spaincentral: spce
+    Spain Central: spce
+
+    # United Kingdom
+    uksouth: ukso
+    UK South: ukso
+
+    ukwest: ukwe
+    UK West: ukwe
+
+    # North America
+    eastus: useu
+    East US: useu
+
+    eastus2: useu2
+    East US 2: useu2
+
+    westus: uswe
+    West US: uswe
+
+    westus2: uswe2
+    West US 2: uswe2
+
+    westus3: uswe3
+    West US 3: uswe3
+
+    centralus: usce
+    Central US: usce
+
+    canadacentral: cace
+    Canada Central: cace
+
+    canadaeast: caea
+    Canada East: caea
+
+    # Asia / Pacific
+    eastasia: asea
+    East Asia: asea
+
+    southeastasia: asse
+    Southeast Asia: asse
+
+    japaneast: jpea
+    Japan East: jpea
+
+    japanwest: jpwe
+    Japan West: jpwe
+
+    australiaeast: auea
+    Australia East: auea
+
+    australiasoutheast: ause
+    Australia Southeast: ause
+
   # Use shortened environment names.
   environment:
     development: dev
     staging: stg
     test: tst
     production: prod
-
-#
-# ################################################################################################
-# ## Define the patterns for generating names.
-
-patterns:
-  default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
-
-  Azure:
-    default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME><?SUBNAME;-%s>.<INDEX;%02s>"
-
-    Microsoft.ContainerRegistry/registries:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.Storage/storageAccounts:
-      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
-      # <name_id>: "<pattern>"
-      # <name_kind>: "<pattern>"
+    integration: int
+    sandbox: sbx
+    preproduction: preprod
+    pre-production: preprod
+    uat: uat
+    qa: qa
+    demo: demo
+    hotfix: hf
