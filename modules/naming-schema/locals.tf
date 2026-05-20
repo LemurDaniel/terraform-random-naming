@@ -22,26 +22,24 @@ output "random" {
 
 output "index_modifier" {
   description = "Output the index modifier"
-  value       = lookup(local.naming, "index_modifier", 1)
+  value       = coalesce(local.naming.index_modifier,  local.default_naming.index_modifier)
 }
 
 output "enforce_lower_case" {
   description = "Output lowercase settings."
-  value = lookup(local.naming, "enforce_lower_case", {
-    default : true
-  })
+  value = coalesce(local.naming.enforce_lower_case,  local.default_naming.enforce_lower_case)
 }
 
 
 
 output "abbreviations" {
   description = "Output the resources part of the schema."
-  value       = coalesce(local.naming.abbreviations, {})
+  value       = merge(coalesce(local.naming.abbreviations, {}), local.default_naming.abbreviations)
 }
 
 output "mappings" {
   description = "Output the mappings for resources."
-  value       = coalesce(local.naming.mappings, {})
+  value       = merge(coalesce(local.naming.mappings, {}), local.default_naming.mappings)
 }
 
 output "patterns" {

@@ -34,7 +34,27 @@ A consistent, schema-driven approach to Azure resource naming in Terraform.
 
 ## 🚀 Quick Start
 
-### Basic Resource Naming
+The `naming-schema` module can be consumed in **two ways**:
+
+1. **Convention** — pick one of the bundled conventions shipped with the module (no YAML file required).
+2. **Custom YAML** — supply your own schema file via the `naming` variable, partially overriding the bundled one.
+
+### Option 1 — use a bundled convention
+
+```hcl
+module "schema" {
+  source = "./modules/naming-schema"
+
+  convention = "default"   # loads modules/naming-schema/convention/default.naming.yaml
+  parameters = {
+    location    = "westeurope"
+    environment = "development"
+    name        = "myapp"
+  }
+}
+```
+
+### Option 2 — provide a custom YAML
 
 ```hcl
 module "schema" {
@@ -47,7 +67,14 @@ module "schema" {
     name        = "myapp"
   }
 }
+```
 
+> [!NOTE]
+> The custom YAML overrides the bundled convention **per top-level key** (`patterns`, `abbreviations`, `mappings`, `enforce_lower_case`, `index_modifier`). Any key you leave unset in your custom YAML falls back to the value from the convention (defaults to `default`, or set `convention = "..."` to pick another base). So you can ship a minimal file that only redefines what you actually need to change.
+
+### Basic Resource Naming
+
+```hcl
 module "disk_naming" {
   source = "./modules/naming-generator"
 
@@ -109,6 +136,26 @@ output "vm_names" {
 
 Declare a single `naming-schema` module in your root configuration. It loads the YAML schema (patterns, mappings, abbreviations, and settings — all in one file) once, and acts as the source of truth for every `naming-generator` call across the project.
 
+You have two options for providing the schema:
+
+**A. Use a bundled convention** — the module ships with ready-to-use conventions under [modules/naming-schema/convention/](modules/naming-schema/convention/). Pick one via the `convention` variable:
+
+```hcl
+# root module: declare ONCE
+module "schema" {
+  source = "./modules/naming-schema"
+
+  convention = "default"   # loads the bundled default.naming.yaml
+  parameters = {
+    location    = "westeurope"
+    environment = "development"
+    name        = "myapp"
+  }
+}
+```
+
+**B. Provide your own YAML** — pass a decoded YAML via the `naming` variable to override parts of the bundled schema:
+
 ```hcl
 # root module: declare ONCE
 module "schema" {
@@ -122,6 +169,8 @@ module "schema" {
   }
 }
 ```
+
+The custom YAML is merged on top of the active convention **per top-level key**: `patterns`, `abbreviations`, `mappings`, `enforce_lower_case`, and `index_modifier`. If a key is missing (or null) in your custom YAML, the value from the convention is used instead — so your file only needs to contain the parts you actually want to change. The active convention defaults to `default`; set `convention = "..."` if you want a different base.
 
 Then pass `module.schema` to every `naming-generator` in your configuration:
 

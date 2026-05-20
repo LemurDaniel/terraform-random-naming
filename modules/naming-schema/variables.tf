@@ -15,12 +15,12 @@ variable "naming" {
   nullable    = true
   description = "(Optional) The default patterns to use for the schema."
   type = object({
-    index_modifier     = number
-    enforce_lower_case = any
+    index_modifier     = optional(number)
+    enforce_lower_case = optional(any)
 
-    mappings      = map(map(string))
-    patterns      = any
-    abbreviations = any
+    mappings      = optional(map(map(string)))
+    patterns      = optional(any)
+    abbreviations = optional(any)
 
     default_parameters = optional(map(any))
   })
