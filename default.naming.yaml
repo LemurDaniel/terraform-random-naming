@@ -28,6 +28,10 @@ enforce_lower_case:
 patterns:
   default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
 
+  # AzureAD resources have no location — pattern omits <LOCATION>.
+  AzureAD:
+    default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
   Azure:
     default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME><?SUBNAME;-%s>-<INDEX;%02s>"
 
@@ -495,3 +499,14 @@ abbreviations:
     Microsoft.DesktopVirtualization/applicationGroups::default: vdag
     Microsoft.DesktopVirtualization/workspaces::default: vdws
     Microsoft.DesktopVirtualization/scalingPlans::default: vdscaling
+
+  AzureAD:
+
+    #/////////////////////////////////////////////////////////////////////////
+    #//// Identity
+    Groups::default: grp
+    Groups::security: grp
+    Groups::m365: grpm
+
+    Applications::default: app
+    ServicePrincipals::default: sp

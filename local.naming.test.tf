@@ -61,6 +61,34 @@ module "naming_02_vm_storage" {
   // naming_id = "vm_pattern"
 }
 
+# ----------------------------------------------------------------------------
+# Example: AzureAD provider.
+#
+# AzureAD resources are global (no location), so the pattern omits <LOCATION>:
+#   AzureAD: default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+#
+# Available kinds:
+#   Groups::default / Groups::security  => grp-...
+#   Groups::m365                        => grpm-...
+#   Applications::default               => app-...
+#   ServicePrincipals::default          => sp-...
+# ----------------------------------------------------------------------------
+module "naming_03_aad_group" {
+  source = "./modules/naming-generator"
+
+  schema = module.schema
+
+  resource = "AzureAD::Groups::security"
+}
+
+module "naming_04_aad_app" {
+  source = "./modules/naming-generator"
+
+  schema = module.schema
+
+  resource = "AzureAD::Applications"
+}
+
 output "test" {
   value = {
     single = module.naming_01.name
@@ -69,6 +97,10 @@ output "test" {
 
     # naming_id="vm" -> abbreviation "stvm" instead of "st"
     vm_storage = module.naming_02_vm_storage.name
+
+    # AzureAD examples - no location in the generated name
+    aad_group = module.naming_03_aad_group.name
+    aad_app   = module.naming_04_aad_app.name
   }
 
 }
