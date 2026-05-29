@@ -4,7 +4,7 @@
 module "schema" {
   source = "./modules/naming-schema"
 
-  naming = yamldecode(file("${path.root}/default.naming.yaml"))
+  convention = "default"
   parameters = {
     location    = "westeurope"
     environment = "DEVELOPMENT"
@@ -57,7 +57,7 @@ module "naming_02_vm_storage" {
 
   schema = module.schema
 
-  resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
+  resource = "Azure::Microsoft.Storage/storageAccounts::vm"
   // naming_id = "vm_pattern"
 }
 
