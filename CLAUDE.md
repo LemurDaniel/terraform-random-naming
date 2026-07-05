@@ -31,7 +31,7 @@ Three modules compose the system:
 - `naming_id` — optional variant selector for alternate patterns/abbreviations
 - `index` / `index_end` — range for generating multiple names
 
-**`modules/resourceGroup/`** — Legacy example module; uses an older variable structure and is not kept in sync.
+**`modules/resourceGroup/`** — Example consumer module; builds an `azurerm_resource_group` using `naming-generator`, kept in sync with its variable/output structure.
 
 The root `local.naming.test.tf` and `terraform.tf` are a scratchpad/integration test space, not a consumable module.
 
