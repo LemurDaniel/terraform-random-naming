@@ -28,7 +28,7 @@ run "subnet" {
 
   # verify that the generated name is correct.
   assert {
-    condition     = output.result == "snet-euwe-test-tftest-01"
+    condition     = output.result == "snet-we-test-tftest-01"
     error_message = "Generated Name is Invalid"
   }
 }

@@ -1,3 +1,10 @@
+# ------------------------------------------------------------------------------------------------
+# naming.full.yaml — reference showing every configurable key of the naming schema
+# (default_parameters, index_modifier, enforce_lower_case, patterns, mappings, abbreviations).
+# Not wired into main.tf; copy from here as a starting point for a fully custom convention.
+# Mirrors modules/naming-schema/convention/default.naming.yaml.
+# ------------------------------------------------------------------------------------------------
+
 #
 # ################################################################################################
 # ## (Optional) Define default parameters.
@@ -41,7 +48,7 @@ patterns:
       default: "<TYPE><ENVIRONMENT><NAME><INDEX;%02s>"
       # <name_id>: "<pattern>"
       # <name_kind>: "<pattern>"
-      
+
     # ----- Containers ------------------------------------------------------
     # Container Registry: 5-50 chars, alphanumeric only (no hyphens).
     Microsoft.ContainerRegistry/registries:
@@ -82,6 +89,21 @@ patterns:
 # ## Define any mappings for the schema.
 
 mappings:
+  # Use shortened environment names.
+  environment:
+    development: dev
+    staging: stg
+    test: tst
+    production: prod
+    integration: int
+    sandbox: sbx
+    preproduction: preprod
+    pre-production: preprod
+    uat: uat
+    qa: qa
+    demo: demo
+    hotfix: hf
+
   # Map location names to their corresponding shortnames.
   # Codes follow the Azure Verified Modules geo_code convention
   # (Azure/terraform-azurerm-avm-utl-regions, locals.geo.codes.tf.json).
@@ -182,29 +204,11 @@ mappings:
     australiasoutheast: ase
     Australia Southeast: ase
 
-  # Use shortened environment names.
-  environment:
-    development: dev
-    staging: stg
-    test: tst
-    production: prod
-    integration: int
-    sandbox: sbx
-    preproduction: preprod
-    pre-production: preprod
-    uat: uat
-    qa: qa
-    demo: demo
-    hotfix: hf
-
-
-
 #
 # ################################################################################################
 # ## This data is generated from: https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations
 abbreviations:
   Azure:
-
     #/////////////////////////////////////////////////////////////////////////
     #//// AI + machine learning
     Microsoft.CognitiveServices/accounts::CognitiveServices: ais
@@ -273,7 +277,6 @@ abbreviations:
     # HDInsight/clusters::default: storm
     # HDInsight/clusters::default: mls
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Compute and web
     Microsoft.Communication/communicationServices::default: acs
@@ -313,7 +316,6 @@ abbreviations:
     Microsoft.Compute/virtualMachines::default: vm
     Microsoft.Compute/virtualMachineScaleSets::default: vmss
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Containers
     Microsoft.ContainerService/managedClusters::default: aks
@@ -352,14 +354,12 @@ abbreviations:
     # DocumentDb/databaseAccounts::default: costab
     # DocumentDb/databaseAccounts::default: cosgrm
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Developer tools
     Microsoft.AppConfiguration/configurationStores::default: appcs
     Microsoft.Maps/accounts::default: map
     Microsoft.SignalRService/SignalR::default: sigr
     Microsoft.SignalRService/webPubSub::default: wps
-
 
     #/////////////////////////////////////////////////////////////////////////
     #//// DevOps
@@ -377,7 +377,6 @@ abbreviations:
     Microsoft.ServiceBus/namespaces/queues::default: sbq
     Microsoft.ServiceBus/namespaces/topics::default: sbt
     Microsoft.ServiceBus/namespaces/topics/subscriptions::default: sbts
-
 
     #/////////////////////////////////////////////////////////////////////////
     #//// Management and governance
@@ -399,13 +398,11 @@ abbreviations:
     Microsoft.Insights/dataCollectionRules::default: dcr
     Microsoft.Insights/dataCollectionEndpoints::default: dce
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Migration
     Microsoft.Migrate/assessmentProjects::default: migr
     Microsoft.DataMigration/services::default: dms
     Microsoft.RecoveryServices/vaults::default: rsv
-
 
     #/////////////////////////////////////////////////////////////////////////
     #//// Networking
@@ -422,12 +419,12 @@ abbreviations:
 
     Microsoft.Network/ipGroups::default: ipg
     Microsoft.Network/connections::default: con
-    Microsoft.Network/dnsZones::default: 
+    Microsoft.Network/dnsZones::default:
     Microsoft.Network/dnsForwardingRulesets::default: dnsfrs
     Microsoft.Network/dnsResolvers::default: dnspr
     Microsoft.Network/dnsResolvers/inboundEndpoints::default: in
     Microsoft.Network/dnsResolvers/outboundEndpoints::default: out
-    Microsoft.Network/privateDnsZones::default: 
+    Microsoft.Network/privateDnsZones::default:
     Microsoft.Network/azureFirewalls::default: afw
     Microsoft.Network/firewallPolicies::default: afwp
     Microsoft.Network/expressRouteCircuits::default: erc
@@ -468,7 +465,6 @@ abbreviations:
     Microsoft.Network/serviceEndPointPolicies::default: se
     Microsoft.Network/trafficManagerProfiles::default: traf
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Security
     Microsoft.Network/bastionHosts::default: bas
@@ -483,7 +479,6 @@ abbreviations:
     # Microsoft.Network/firewallPolicies::default: waf
     Microsoft.Network/firewallPolicies/ruleGroups::default: wafrg
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Storage
     Microsoft.DataProtection/backupVaults::default: bvault
@@ -494,7 +489,6 @@ abbreviations:
     Microsoft.Storage/storageAccounts::vm: stvm
     Microsoft.StorageSync/storageSyncServices::default: sss
 
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Virtual desktop infrastructure
     Microsoft.DesktopVirtualization/hostPools::default: vdpool
@@ -503,7 +497,6 @@ abbreviations:
     Microsoft.DesktopVirtualization/scalingPlans::default: vdscaling
 
   AzureAD:
-
     #/////////////////////////////////////////////////////////////////////////
     #//// Identity
     Groups::default: grp

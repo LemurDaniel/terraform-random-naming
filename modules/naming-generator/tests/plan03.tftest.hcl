@@ -28,7 +28,7 @@ run "storage_account" {
 
   # verify that the generated name is correct.
   assert {
-    condition     = output.result == "steuwetesttftest01"
+    condition     = output.result == "stwetesttftest01"
     error_message = "Generated Name is Invalid"
   }
 }

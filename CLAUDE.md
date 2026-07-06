@@ -33,7 +33,7 @@ Three modules compose the system:
 
 **`modules/resourceGroup/`** — Example consumer module; builds an `azurerm_resource_group` using `naming-generator`, kept in sync with its variable/output structure.
 
-The root `local.naming.test.tf` and `terraform.tf` are a scratchpad/integration test space, not a consumable module.
+The repository root has no root module — this is a Terraform Registry module published as a collection of submodules under `modules/`, per the [standard module structure](https://developer.hashicorp.com/terraform/registry/modules/publish#standard-module-structure). `examples/basic01/`, `examples/basic02/`, `examples/basic03/` are runnable scratchpad configs exercising the modules together, not consumable modules themselves.
 
 ## Naming Schema YAML
 

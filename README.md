@@ -34,6 +34,19 @@ A consistent, schema-driven approach to Azure resource naming in Terraform.
 
 ## 🚀 Quick Start
 
+Reference the module from the [Terraform Registry](https://registry.terraform.io/modules/LemurDaniel-Solutions/naming/azurerm), pinning a version:
+
+```hcl
+module "schema" {
+  source  = "LemurDaniel-Solutions/naming/azurerm//modules/naming-schema"
+  version = "~> 1.0"
+  # ...
+}
+```
+
+> [!NOTE]
+> Full runnable examples live under [examples/](examples/): [basic01](examples/basic01/) (index ranges), [basic02](examples/basic02/) (`naming_id` variants), [basic03](examples/basic03/) (AzureAD resources). The snippets below use local `./modules/...` paths for brevity — replace `source` with the registry address above when consuming this module from another repository.
+
 The `naming-schema` module can be consumed in **two ways**:
 
 1. **Convention** — pick one of the bundled conventions shipped with the module (no YAML file required).
@@ -83,7 +96,7 @@ module "disk_naming" {
 }
 
 output "disk_name" {
-  value = module.disk_naming.name  # "osdsk-euwe-dev-myapp-01"
+  value = module.disk_naming.name  # "osdsk-we-dev-myapp-01"
 }
 ```
 
@@ -116,12 +129,12 @@ module "vm_naming" {
 
   index = {
     start = 0
-    count = 5  # generates vm-euwe-dev-myapp-01 through -05
+    count = 5  # generates vm-we-dev-myapp-01 through -05
   }
 }
 
 output "vm_names" {
-  value = module.vm_naming.by_index  # ["vm-euwe-dev-myapp-01", ..., "vm-euwe-dev-myapp-05"]
+  value = module.vm_naming.by_index  # ["vm-we-dev-myapp-01", ..., "vm-we-dev-myapp-05"]
 }
 ```
 
@@ -349,21 +362,21 @@ module "hub_vnet" {
 
 <br>
 
-Mappings translate full names (e.g. `West Europe`) to short codes (`euwe`) before they are inserted into the pattern. Matching is **case-insensitive**, so `westeurope` and `West Europe` resolve identically.
+Mappings translate full names (e.g. `West Europe`) to short codes (`we`) before they are inserted into the pattern. Matching is **case-insensitive**, so `westeurope` and `West Europe` resolve identically.
 
 ```yaml
 mappings:
   location:
     global:               glob
 
-    westeurope:           euwe
-    West Europe:          euwe
+    westeurope:           we
+    West Europe:          we
 
-    germanynorth:         geno
-    Germany North:        geno
+    germanynorth:         gn
+    Germany North:        gn
 
-    germanywestcentral:   gewc
-    Germany West Central: gewc
+    germanywestcentral:   gwc
+    Germany West Central: gwc
 
   environment:
     development: dev

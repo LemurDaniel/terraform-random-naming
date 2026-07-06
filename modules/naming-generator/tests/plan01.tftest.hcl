@@ -34,7 +34,7 @@ run "name_virtual_network" {
 
   # verify that the generated name is correct.
   assert {
-    condition     = output.name == "vnet-euwe-tst-tftest-01"
+    condition     = output.name == "vnet-we-tst-tftest-01"
     error_message = "Generated Name is Invalid"
   }
 }
