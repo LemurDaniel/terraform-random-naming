@@ -1,5 +1,5 @@
 
-# Terraform Azure Naming Module
+# Terraform Naming Generator Module
 
 <div align="center">
 
@@ -9,9 +9,36 @@
 ![Azure](https://img.shields.io/badge/Azure-0089D6?style=for-the-badge&logo=microsoftazure&logoColor=white)
 ![YAML](https://img.shields.io/badge/YAML-CB171E?style=for-the-badge&logo=yaml&logoColor=white)
 
-A consistent, schema-driven approach to Azure resource naming in Terraform.
+A consistent, schema-driven approach to resource naming in Terraform.
 
 </div>
+
+```hcl
+module "schema" {
+  source  = "LemurDaniel/naming-schema/random"
+  version = "~> 1.0"
+
+  parameters = {
+    location    = "westeurope"
+    environment = "development"
+    name        = "myapp"
+  }
+}
+
+module "storage_account_naming" {
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
+
+  schema   = module.schema
+  resource = "Azure::Microsoft.Storage/storageAccounts"
+}
+
+output "storage_account_name" {
+  value = module.storage_account_naming.name  # "stwedevmyapp01"
+}
+```
+
+---
 
 ## 🙏 Acknowledgments
 
@@ -34,69 +61,74 @@ A consistent, schema-driven approach to Azure resource naming in Terraform.
 
 ## 🚀 Quick Start
 
-Reference the module from the [Terraform Registry](https://registry.terraform.io/modules/LemurDaniel-Solutions/naming/azurerm), pinning a version:
+This module (the *generator*) renders names from a schema object. The schema itself comes from the companion [`naming-schema`](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) module, which loads and merges the YAML naming convention (patterns, abbreviations, mappings, settings).
+
+Reference both from the [Terraform Registry](https://registry.terraform.io/modules/LemurDaniel/naming/random), pinning a version:
 
 ```hcl
 module "schema" {
-  source  = "LemurDaniel-Solutions/naming/azurerm//modules/naming-schema"
+  source  = "LemurDaniel/naming-schema/random"
   version = "~> 1.0"
-  # ...
-}
-```
 
-> [!NOTE]
-> Full runnable examples live under [examples/](examples/): [basic01](examples/basic01/) (index ranges), [basic02](examples/basic02/) (`naming_id` variants), [basic03](examples/basic03/) (AzureAD resources). The snippets below use local `./modules/...` paths for brevity — replace `source` with the registry address above when consuming this module from another repository.
-
-The `naming-schema` module can be consumed in **two ways**:
-
-1. **Convention** — pick one of the bundled conventions shipped with the module (no YAML file required).
-2. **Custom YAML** — supply your own schema file via the `naming` variable, partially overriding the bundled one.
-
-### Option 1 — use a bundled convention
-
-```hcl
-module "schema" {
-  source = "./modules/naming-schema"
-
-  convention = "default"   # loads modules/naming-schema/convention/default.naming.yaml
+  naming     = yamldecode(file("${path.root}/naming.yaml"))
   parameters = {
     location    = "westeurope"
     environment = "development"
     name        = "myapp"
   }
 }
-```
 
-### Option 2 — provide a custom YAML
+module "naming_storage_account" {
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
-```hcl
-module "schema" {
-  source = "./modules/naming-schema"
+  schema   = module.schema
+  resource = "Azure::Microsoft.Storage/storageAccounts"
+}
 
-  naming = yamldecode(file("${path.root}/default.naming.yaml"))
-  parameters = {
-    location    = "westeurope"
-    environment = "development"
-    name        = "myapp"
-  }
+output "storage_account_name" {
+  value = module.naming_storage_account.name  # "stwedevmyapp01"
 }
 ```
 
 > [!NOTE]
-> The custom YAML overrides the bundled convention **per top-level key** (`patterns`, `abbreviations`, `mappings`, `enforce_lower_case`, `index_modifier`). Any key you leave unset in your custom YAML falls back to the value from the convention (defaults to `default`, or set `convention = "..."` to pick another base). So you can ship a minimal file that only redefines what you actually need to change.
+> Full runnable examples live under [examples/](examples/): [basic01](examples/basic01/) (index ranges), [basic02](examples/basic02/) (`naming_id` variants), [basic03](examples/basic03/) (AzureAD resources).
+
+Declare `naming-schema` **once** per configuration, then pass its output (`module.schema`) to every `naming-generator` call:
+
+```hcl
+module "rg_naming" {
+  source   = "LemurDaniel/naming/random"
+  version  = "~> 1.0"
+
+  schema   = module.schema
+  resource = "Azure::Microsoft.Resources/resourceGroups"
+}
+
+module "vnet_naming" {
+  source   = "LemurDaniel/naming/random"
+  version  = "~> 1.0"
+
+  schema   = module.schema
+  resource = "Azure::Microsoft.Network/virtualNetworks"
+}
+```
+
+See the [naming-schema README](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) for the two ways to configure the schema (bundled convention vs. custom YAML).
 
 ### Basic Resource Naming
 
 ```hcl
 module "disk_naming" {
-  source = "./modules/naming-generator"
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
   schema   = module.schema
   resource = "Azure::Microsoft.Compute/disks::os"
 }
 
 output "disk_name" {
-  value = module.disk_naming.name  # "osdsk-we-dev-myapp-01"
+  value = module.disk_naming.name  # "osdisk-we-dev-myapp"
 }
 ```
 
@@ -106,15 +138,36 @@ Use `::kind` to give the same resource type different abbreviations depending on
 
 ```hcl
 module "disk_os" {
-  source   = "./modules/naming-generator"
+  source   = "LemurDaniel/naming/random"
+  version  = "~> 1.0"
   schema   = module.schema
-  resource = "Azure::Microsoft.Compute/disks::os"    # abbreviation: osdsk
+  resource = "Azure::Microsoft.Compute/disks::os"    # abbreviation: osdisk
 }
 
 module "disk_data" {
-  source   = "./modules/naming-generator"
+  source   = "LemurDaniel/naming/random"
+  version  = "~> 1.0"
   schema   = module.schema
-  resource = "Azure::Microsoft.Compute/disks::data"  # abbreviation: datadsk
+  resource = "Azure::Microsoft.Compute/disks::data"  # abbreviation: disk
+}
+```
+
+### Picking a Variant via `naming_id`
+
+`naming_id` selects an abbreviation and pattern by a specific identifier, taking precedence over the `::kind` on the resource string ([examples/basic02](examples/basic02/)):
+
+```hcl
+module "vm_storage" {
+  source    = "LemurDaniel/naming/random"
+  version   = "~> 1.0"
+
+  schema    = module.schema
+  resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
+  naming_id = "vm_pattern"
+}
+
+output "vm_storage_name" {
+  value = module.vm_storage.name  # "stvmwedevtest01"
 }
 ```
 
@@ -122,19 +175,38 @@ module "disk_data" {
 
 ```hcl
 module "vm_naming" {
-  source = "./modules/naming-generator"
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
   schema   = module.schema
   resource = "Azure::Microsoft.Compute/virtualMachines"
 
   index = {
     start = 0
-    count = 5  # generates vm-we-dev-myapp-01 through -05
+    count = 5  # generates vmdevmyapp01 through vmdevmyapp05
   }
 }
 
 output "vm_names" {
-  value = module.vm_naming.by_index  # ["vm-we-dev-myapp-01", ..., "vm-we-dev-myapp-05"]
+  value = module.vm_naming.by_index
+}
+```
+
+### Other Providers (e.g. AzureAD)
+
+The `resource` string is provider-agnostic — anything defined under `abbreviations`/`patterns` in the schema works, not just `Azure::...` ([examples/basic03](examples/basic03/)):
+
+```hcl
+module "aad_group" {
+  source   = "LemurDaniel/naming/random"
+  version  = "~> 1.0"
+
+  schema   = module.schema
+  resource = "AzureAD::Groups::security"
+}
+
+output "aad_group_name" {
+  value = module.aad_group.name  # "grp-test-dev-01"
 }
 ```
 
@@ -143,65 +215,11 @@ output "vm_names" {
 ## ⚙️ How It Works
 
 <details>
-<summary><strong>🧩 How to use</strong> — declare the central naming module once, reference it in all configurations</summary>
+<summary><strong>🧩 Resource Identifier Format</strong></summary>
 
 <br>
 
-Declare a single `naming-schema` module in your root configuration. It loads the YAML schema (patterns, mappings, abbreviations, and settings — all in one file) once, and acts as the source of truth for every `naming-generator` call across the project.
-
-You have two options for providing the schema:
-
-**A. Use a bundled convention** — the module ships with ready-to-use conventions under [modules/naming-schema/convention/](modules/naming-schema/convention/). Pick one via the `convention` variable:
-
-```hcl
-# root module: declare ONCE
-module "schema" {
-  source = "./modules/naming-schema"
-
-  convention = "default"   # loads the bundled default.naming.yaml
-  parameters = {
-    location    = "westeurope"
-    environment = "development"
-    name        = "myapp"
-  }
-}
-```
-
-**B. Provide your own YAML** — pass a decoded YAML via the `naming` variable to override parts of the bundled schema:
-
-```hcl
-# root module: declare ONCE
-module "schema" {
-  source = "./modules/naming-schema"
-
-  naming = yamldecode(file("${path.root}/default.naming.yaml"))
-  parameters = {
-    location    = "westeurope"
-    environment = "development"
-    name        = "myapp"
-  }
-}
-```
-
-The custom YAML is merged on top of the active convention **per top-level key**: `patterns`, `abbreviations`, `mappings`, `enforce_lower_case`, and `index_modifier`. If a key is missing (or null) in your custom YAML, the value from the convention is used instead — so your file only needs to contain the parts you actually want to change. The active convention defaults to `default`; set `convention = "..."` if you want a different base.
-
-Then pass `module.schema` to every `naming-generator` in your configuration:
-
-```hcl
-module "rg_naming" {
-  source   = "./modules/naming-generator"
-  schema   = module.schema
-  resource = "Azure::Microsoft.Resources/resourceGroups"
-}
-
-module "storage_naming" {
-  source   = "./modules/naming-generator"
-  schema   = module.schema
-  resource = "Azure::Microsoft.Storage/storageAccounts"
-}
-```
-
-**Resource identifier format** — every `naming-generator` call expects a `resource` string in this shape:
+Every `naming-generator` call expects a `resource` string in this shape:
 
 ```
 Provider::Namespace/Type::kind
@@ -210,7 +228,7 @@ Provider::Namespace/Type::kind
 | Segment | Example | Description |
 |---|---|---|
 | `Provider` | `Azure` | Cloud provider — selects the pattern and abbreviation namespace |
-| `Namespace/Type` | `Microsoft.Compute/disks` | Azure resource provider and type |
+| `Namespace/Type` | `Microsoft.Compute/disks` | Resource provider and type |
 | `kind` *(optional)* | `os` | Differentiates resources of the same type; defaults to `default` |
 
 ```hcl
@@ -218,36 +236,31 @@ resource = "Azure::Microsoft.Compute/disks::os"
 resource = "Azure::Microsoft.Storage/storageAccounts"   # kind defaults to "default"
 ```
 
-To swap conventions between environments, just point `naming` at a different YAML file — no resource code changes required.
-
 </details>
 
 <details>
-<summary><strong>🎨 Define your patterns</strong></summary>
+<summary><strong>🎨 Pattern Token Syntax</strong></summary>
 
 <br>
 
-Patterns are strings with placeholder tokens that get substituted at evaluation time.
+Patterns are strings with placeholder tokens, resolved from `schema.patterns` and rendered at evaluation time.
 
-**Token syntax:**
-
-| Syntax | Behavior |
+| Token | Meaning |
 |---|---|
 | `<PARAMETER>` | Required — fails if the parameter is missing |
-| `<?PARAMETER;-%s>` | Optional — omitted silently if not provided |
-| `<PARAMETER;%02s>` | Format string — uses printf-style formatting |
+| `<?PARAMETER;-%s>` | Optional — the whole format (including any separator) is dropped when the parameter is missing |
+| `<PARAMETER;%02s>` | Format string — printf-style formatting |
+| `<TYPE>` | Resolved abbreviation for the resource |
+| `<NAMING_ID>` | The `naming_id`, falling back to `kind`, for the current call |
+| `<INDEX;%02s>` | Numeric index, shifted by `index_modifier` and incremented across the index range |
+| `<UNIQUE_ID_n>` | First `n` characters of a random UUID (e.g. `<UNIQUE_ID_4>`) |
 
 > [!IMPORTANT]
 > **Put separators _inside_ the optional placeholder.**
 >
-> The format string after `;` is what gets rendered when the parameter is present — and dropped completely when it is missing. So a leading `-` (or `_`, `.`, etc.) inside the format becomes part of the optional segment:
->
 > ```yaml
 > # ✅ Correct — the leading "-" disappears together with SUBNAME
 > default: "<TYPE>-<NAME><?SUBNAME;-%s>-<INDEX;%02s>"
-> #                       └──────┬──────┘
-> #                              └─ entire "-<value>" is dropped when SUBNAME is empty
->
 > # With SUBNAME="api"  →  app-myapp-api-01
 > # Without SUBNAME     →  app-myapp-01     (no stray dash)
 >
@@ -256,35 +269,22 @@ Patterns are strings with placeholder tokens that get substituted at evaluation 
 > # Without SUBNAME     →  app-myapp--01  (double dash!)
 > ```
 
-**Special tokens:**
-
-| Token | Description |
-|---|---|
-| `<TYPE>` | Resolved abbreviation for the resource type |
-| `<NAMING_ID>` | The ID, or fallback to Kind on the current naming call |
-| `<INDEX;format>` | Numeric index, incremented across the index range |
-| `<UNIQUE_ID_n>` | First `n` characters of a random UUID (e.g. `<UNIQUE_ID_4>`) |
-
 **Pattern resolution order** — first match wins:
 
 ```
-resourceType.id  →  resourceType.kind  →  resourceType.default  →  provider default  →  global default  →  error
+resourceType::naming_id  →  resourceType::kind  →  resourceType::default  →  provider default  →  global default  →  error
 ```
 
 ```yaml
 patterns:
-  # Global fallback — used when no provider-specific pattern matches
   default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
 
+  AzureAD:
+    default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"   # no <LOCATION> — AzureAD resources are global
+
   Azure:
-    # Provider fallback
     default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
 
-    # Single pattern for a resource type (keyed by "default" kind)
-    Microsoft.ContainerRegistry/registries:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    # Multiple patterns per resource type — selected by kind or naming_id
     Microsoft.Compute/disks:
       os:   "<TYPE>-<NAME>-<ENVIRONMENT>"
       data: "<TYPE><INDEX;%02s>-<NAME>-<ENVIRONMENT>"
@@ -294,46 +294,28 @@ patterns:
       default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
 ```
 
-**Lowercase enforcement** — controlled globally or per resource type. Provider-level entries override the global default. Wildcard matching is supported (`azurerm*` matches all `azurerm_` types):
-
-```yaml
-enforce_lower_case:
-  default: true        # applies to all resources unless overridden
-
-  azurerm:             # provider-level overrides
-    default: false
-    container_registry: true
-    storage_account: true
-```
-
-**Index modifier** — shifts the numeric index before formatting. With `index_modifier: 1` and `index.start: 0`, the first generated name carries index `01` instead of `00`:
-
-```yaml
-index_modifier: 1
-```
+**Index modifier** — shifts the numeric index before formatting. With `index_modifier: 1` and `index.start: 0`, the first generated name carries index `01` instead of `00`.
 
 </details>
 
 <details>
-<summary><strong>🔤 Define your abbreviations</strong></summary>
+<summary><strong>🔤 Abbreviations</strong></summary>
 
 <br>
 
-Abbreviations live under the `abbreviations:` top-level key of the same naming schema YAML and map resource types to short codes used in the `<TYPE>` token. The default set is CAF-aligned and ships with the module — you can override individual entries or add your own provider namespaces alongside `Azure`.
+Abbreviations live under `schema.abbreviations` and map resource types to short codes used in the `<TYPE>` token. The bundled `default` convention (from `naming-schema`) ships with the full set of [CAF resource abbreviations](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations).
 
 **Abbreviation resolution order** — first match wins:
 
 ```
-type::id   →   type::kind   →   type::default   →   type
+type::naming_id   →   type::kind   →   type::default   →   type
 ```
 
 ```yaml
-# default.naming.yaml
 abbreviations:
   Azure:
-    Microsoft.Compute/disks::os:      osdsk
-    Microsoft.Compute/disks::data:    datadsk
-    Microsoft.Compute/disks::default: disk
+    Microsoft.Compute/disks::os:      osdisk
+    Microsoft.Compute/disks::data:    disk
 
     # Same resource type, different abbreviation per kind
     Microsoft.Web/sites::default:     app
@@ -344,39 +326,32 @@ abbreviations:
     Microsoft.Storage/storageAccounts::vm:      stvm
 ```
 
-**Picking a variant with `naming_id`** — pass `naming_id` to select an abbreviation by a specific identifier instead of kind. This takes precedence over the kind from the resource string:
+`naming_id` takes precedence over `kind` and is passed explicitly on the `naming-generator` call:
 
 ```hcl
-module "hub_vnet" {
-  source    = "./modules/naming-generator"
+module "vm_storage" {
+  source    = "LemurDaniel/naming/random"
+  version   = "~> 1.0"
   schema    = module.schema
-  resource  = "Azure::Microsoft.Network/virtualNetworks"
-  naming_id = "hub"   # matches type::hub before falling back to type::kind
+  resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
+  naming_id = "vm_pattern"   # matches type::vm_pattern before falling back to type::vm (kind)
 }
 ```
 
 </details>
 
 <details>
-<summary><strong>🗺️ Define your mappings</strong></summary>
+<summary><strong>🗺️ Mappings</strong></summary>
 
 <br>
 
-Mappings translate full names (e.g. `West Europe`) to short codes (`we`) before they are inserted into the pattern. Matching is **case-insensitive**, so `westeurope` and `West Europe` resolve identically.
+Mappings translate full parameter values (e.g. `West Europe`) to short codes (`we`) before they are inserted into the pattern. Matching is **case-insensitive**, so `westeurope` and `West Europe` resolve identically.
 
 ```yaml
 mappings:
   location:
-    global:               glob
-
-    westeurope:           we
-    West Europe:          we
-
-    germanynorth:         gn
-    Germany North:        gn
-
-    germanywestcentral:   gwc
-    Germany West Central: gwc
+    westeurope: we
+    West Europe: we
 
   environment:
     development: dev
@@ -385,6 +360,44 @@ mappings:
     production:  prod
 ```
 
-Any parameter passed to `naming-generator` is automatically mapped if a matching entry exists. Unmapped values are used as-is, so you can add new parameter categories (e.g. `tier`, `region_group`) without changing any code — just define the mapping in YAML and reference it from a pattern via the matching `<TOKEN>`.
+Any parameter passed via `schema` (`default_parameters`) or the generator's own `parameters` input is automatically mapped if a matching entry exists. Unmapped values are used as-is, so new parameter categories (e.g. `tier`) work without any code change — just add the mapping in YAML and reference it from a pattern via the matching `<TOKEN>`.
 
 </details>
+
+---
+
+## 📥 Inputs
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `schema` | `object` | Yes | The resolved schema, i.e. the output of the [`naming-schema`](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) module. |
+| `resource` | `string` | Yes | The resource identifier: `Provider::Namespace/Type::kind`. |
+| `naming_id` | `string` | No (default `""`) | Selects a specific abbreviation/pattern variant, taking precedence over `kind`. |
+| `index` | `object({ start, count })` | No (default `{ start = 0, count = 1 }`) | Range of indices to generate names for. |
+| `parameters` | `map(any)` | No (default `{}`) | Additional/overriding parameters merged on top of the schema's `default_parameters` for this call. |
+
+## 📤 Outputs
+
+| Name | Description |
+|---|---|
+| `name` | The final generated name for `index.start`. |
+| `result` | Alias for `name`. |
+| `at_index` | Array of names across the full `index` range. |
+| `by_index` | Alias for `at_index`. |
+| `index` | Alias for `at_index`. |
+
+---
+
+## Examples
+
+Full runnable configurations live under [examples/](examples/), each pairing `naming-schema` with `naming-generator`:
+
+- [basic01](examples/basic01/) — a custom YAML override (`index_modifier: 0`) and generating a single name.
+- [basic02](examples/basic02/) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
+- [basic03](examples/basic03/) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
+
+Each example directory also ships a [`naming.full.yaml`](examples/basic01/naming.full.yaml) — an annotated reference covering every configurable key of the schema, not wired into `main.tf`, meant as a copy-paste starting point for a fully custom convention.
+
+## License
+
+[MIT](LICENSE)
