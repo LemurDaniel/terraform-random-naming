@@ -32,8 +32,8 @@
 module "schema" {
   source  = "LemurDaniel/naming-schema/random"
   version = "~> 1.0"
-  
-  naming     = yamldecode(file("${path.module}/naming.basic.yaml"))
+
+  naming = yamldecode(file("${path.module}/naming.basic.yaml"))
   parameters = {
     location    = "westeurope"
     environment = "DEVELOPMENT"
@@ -41,16 +41,16 @@ module "schema" {
   }
 }
 
-module "naming_vm_storage" {
-  source = "../.."
+module "naming_storage_account" {
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
-  schema = module.schema
-
-  resource = "Azure::Microsoft.Storage/storageAccounts::vm"
-  // naming_id = "vm_pattern"
+  schema    = module.schema
+  resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
+  naming_id = "vm_pattern"
 }
 
 output "vm_storage" {
   # naming_id="vm" -> abbreviation "stvm" instead of "st"
-  value = module.naming_vm_storage.name
+  value = module.naming_storage_account.name
 }

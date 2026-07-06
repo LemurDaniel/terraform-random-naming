@@ -16,7 +16,7 @@ module "schema" {
   source  = "LemurDaniel/naming-schema/random"
   version = "~> 1.0"
 
-  naming     = yamldecode(file("${path.module}/naming.basic.yaml"))
+  naming = yamldecode(file("${path.module}/naming.basic.yaml"))
   parameters = {
     location    = "westeurope"
     environment = "DEVELOPMENT"
@@ -25,16 +25,18 @@ module "schema" {
 }
 
 module "naming_aad_group" {
-  source = "../.."
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
-  schema = module.schema
+  schema   = module.schema
   resource = "AzureAD::Groups::security"
 }
 
 module "naming_aad_app" {
-  source = "../.."
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
-  schema = module.schema
+  schema   = module.schema
   resource = "AzureAD::Applications"
 }
 

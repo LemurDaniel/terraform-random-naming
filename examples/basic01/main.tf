@@ -19,7 +19,8 @@ module "schema" {
 }
 
 module "naming_storage_account" {
-  source = "../.."
+  source  = "LemurDaniel/naming/random"
+  version = "~> 1.0"
 
   schema = module.schema
   resource = "Azure::Microsoft.Storage/storageAccounts"
