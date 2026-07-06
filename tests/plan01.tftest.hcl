@@ -1,7 +1,7 @@
 
 run "schema" {
   module {
-    source = "../naming-schema"
+    source = "./modules/naming-schema"
   }
 
   variables {

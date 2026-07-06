@@ -30,9 +30,9 @@
 # ----------------------------------------------------------------------------
 
 module "schema" {
-  source = "../../modules/naming-schema"
-
-  convention = "default"
+  source  = "LemurDaniel/naming-schema/random"
+  version = "~> 1.0"
+  
   naming     = yamldecode(file("${path.module}/naming.basic.yaml"))
   parameters = {
     location    = "westeurope"
@@ -42,7 +42,7 @@ module "schema" {
 }
 
 module "naming_vm_storage" {
-  source = "../../modules/naming-generator"
+  source = "../.."
 
   schema = module.schema
 
