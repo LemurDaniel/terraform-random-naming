@@ -20,6 +20,7 @@ module "schema" {
   source  = "LemurDaniel/naming-schema/random"
   version = "~> 1.0"
 
+  naming     = yamldecode(file("${path.root}/naming.yaml"))
   parameters = {
     location    = "westeurope"
     environment = "development"
@@ -39,6 +40,86 @@ output "storage_account_name" {
   value = module.storage_account_naming.name  # "stwedevmyapp01"
 }
 ```
+
+Naming conventions are just YAML. The `naming.yaml` loaded above looks like this ([`naming.basic.yaml`](examples/basic01/naming.basic.yaml)):
+
+```yaml
+# Custom override on top of the "default" convention.
+#
+# NOTE: `patterns` is replaced wholesale when set (no per-key fallback), so it
+# is copied here unmodified from modules/naming-schema/convention/default.naming.yaml.
+# `index_modifier` below is the actual override this example demonstrates:
+# indices now start at 00 instead of 01.
+
+index_modifier: 0
+
+patterns:
+  default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
+
+  AzureAD:
+    default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+  Azure:
+    default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME><?SUBNAME;-%s>-<INDEX;%02s>"
+
+    Microsoft.Compute/virtualMachines:
+      default: "<TYPE><ENVIRONMENT><NAME><INDEX;%02s>"
+
+    Microsoft.ContainerRegistry/registries:
+      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+
+    Microsoft.Resources/resourceGroups:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/virtualNetworks:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/virtualNetworks/subnets:
+      default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/publicIPAddresses:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.Network/networkSecurityGroups:
+      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+
+    Microsoft.KeyVault/vaults:
+      default: "<TYPE>-<ENVIRONMENT>-<NAME>-<UNIQUE_ID_4>"
+
+    Microsoft.Storage/storageAccounts:
+      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+      vm_pattern: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+```
+
+This example only overrides `patterns` and `index_modifier` — `mappings` and `abbreviations` fall back to the bundled `default` convention (from [`modules/naming-schema/convention/default.naming.yaml`](modules/naming-schema/convention/default.naming.yaml)), which looks like this:
+
+```yaml
+mappings:
+  location:
+    westeurope: we
+    West Europe: we
+    eastus: eus
+    East US: eus
+    # ... every Azure region
+
+  environment:
+    development: dev
+    staging: stg
+    test: tst
+    production: prod
+    # ... more shortened environment names
+
+abbreviations:
+  Azure:
+    Microsoft.Compute/disks::os: osdisk
+    Microsoft.Compute/disks::data: disk
+    Microsoft.Storage/storageAccounts::default: st
+    Microsoft.Network/virtualNetworks::default: vnet
+    # ... the full set of CAF resource abbreviations
+```
+
+> [!NOTE]
+> For a fully annotated reference covering every configurable key, see [`naming.full.yaml`](examples/basic01/naming.full.yaml).
 
 ---
 
@@ -95,6 +176,8 @@ output "storage_account_name" {
 
 > [!NOTE]
 > Full runnable examples live under [examples/](examples/): [basic01](examples/basic01/) (index ranges), [basic02](examples/basic02/) (`naming_id` variants), [basic03](examples/basic03/) (AzureAD resources).
+>
+> The `naming.yaml` referenced above is a custom override on top of the bundled `default` convention — see [`naming.basic.yaml`](examples/basic01/naming.basic.yaml) in the top example above for what it actually contains.
 
 Declare `naming-schema` **once** per configuration, then pass its output (`module.schema`) to every `naming-generator` call:
 
