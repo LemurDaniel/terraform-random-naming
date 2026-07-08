@@ -11,11 +11,11 @@
 ![Azure](https://img.shields.io/badge/Azure-0089D6?style=for-the-badge&logo=microsoftazure&logoColor=white)
 ![YAML](https://img.shields.io/badge/YAML-CB171E?style=for-the-badge&logo=yaml&logoColor=white)
 
+</div>
+
 A consistent, schema-driven approach to resource naming in Terraform.
 
 📖 For more info and examples, see this module on [GitHub](https://github.com/LemurDaniel/terraform-random-naming) — or ask Claude with the link to the module.
-
-</div>
 
 ```hcl
 module "schema" {
