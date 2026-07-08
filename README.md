@@ -13,6 +13,8 @@
 
 A consistent, schema-driven approach to resource naming in Terraform.
 
+📖 For more info and examples, see this module on [GitHub](https://github.com/LemurDaniel/terraform-random-naming) — or ask Claude with the link to the module.
+
 </div>
 
 ```hcl
@@ -41,7 +43,7 @@ output "storage_account_name" {
 }
 ```
 
-Naming conventions are just YAML. The `naming.yaml` loaded above looks like this ([`naming.basic.yaml`](examples/basic01/naming.basic.yaml)):
+Naming conventions are just YAML. The `naming.yaml` loaded above looks like this (`naming.basic.yaml`, see [GitHub](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.basic.yaml) if this link doesn't render):
 
 ```yaml
 # Custom override on top of the "default" convention.
@@ -91,7 +93,7 @@ patterns:
       vm_pattern: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
 ```
 
-This example only overrides `patterns` and `index_modifier` — `mappings` and `abbreviations` fall back to the bundled `default` convention (from [`modules/naming-schema/convention/default.naming.yaml`](modules/naming-schema/convention/default.naming.yaml)), which looks like this:
+This example only overrides `patterns` and `index_modifier` — `mappings` and `abbreviations` fall back to the bundled `default` convention (from [`convention/default.naming.yaml`](https://github.com/LemurDaniel/terraform-random-naming-schema/blob/master/convention/default.naming.yaml) in the companion [`terraform-random-naming-schema`](https://github.com/LemurDaniel/terraform-random-naming-schema) repository), which looks like this:
 
 ```yaml
 mappings:
@@ -119,7 +121,7 @@ abbreviations:
 ```
 
 > [!NOTE]
-> For a fully annotated reference covering every configurable key, see [`naming.full.yaml`](examples/basic01/naming.full.yaml).
+> For a fully annotated reference covering every configurable key, see [`naming.full.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.full.yaml).
 
 ---
 
@@ -175,9 +177,9 @@ output "storage_account_name" {
 ```
 
 > [!NOTE]
-> Full runnable examples live under [examples/](examples/): [basic01](examples/basic01/) (index ranges), [basic02](examples/basic02/) (`naming_id` variants), [basic03](examples/basic03/) (AzureAD resources).
+> Full runnable examples live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples): [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) (index ranges), [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) (`naming_id` variants), [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) (AzureAD resources).
 >
-> The `naming.yaml` referenced above is a custom override on top of the bundled `default` convention — see [`naming.basic.yaml`](examples/basic01/naming.basic.yaml) in the top example above for what it actually contains.
+> The `naming.yaml` referenced above is a custom override on top of the bundled `default` convention — see [`naming.basic.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.basic.yaml) in the top example above for what it actually contains.
 
 Declare `naming-schema` **once** per configuration, then pass its output (`module.schema`) to every `naming-generator` call:
 
@@ -239,7 +241,7 @@ module "disk_data" {
 
 ### Picking a Variant via `naming_id`
 
-`naming_id` selects an abbreviation and pattern by a specific identifier, taking precedence over the `::kind` on the resource string ([examples/basic02](examples/basic02/)):
+`naming_id` selects an abbreviation and pattern by a specific identifier, taking precedence over the `::kind` on the resource string ([examples/basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02)):
 
 ```hcl
 module "vm_storage" {
@@ -279,7 +281,7 @@ output "vm_names" {
 
 ### Other Providers (e.g. AzureAD)
 
-The `resource` string is provider-agnostic — anything defined under `abbreviations`/`patterns` in the schema works, not just `Azure::...` ([examples/basic03](examples/basic03/)):
+The `resource` string is provider-agnostic — anything defined under `abbreviations`/`patterns` in the schema works, not just `Azure::...` ([examples/basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03)):
 
 ```hcl
 module "aad_group" {
@@ -475,14 +477,14 @@ Any parameter passed via `schema` (`default_parameters`) or the generator's own 
 
 ## Examples
 
-Full runnable configurations live under [examples/](examples/), each pairing `naming-schema` with `naming-generator`:
+Full runnable configurations live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples), each pairing `naming-schema` with `naming-generator`:
 
-- [basic01](examples/basic01/) — a custom YAML override (`index_modifier: 0`) and generating a single name.
-- [basic02](examples/basic02/) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
-- [basic03](examples/basic03/) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
+- [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) — a custom YAML override (`index_modifier: 0`) and generating a single name.
+- [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
+- [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
 
-Each example directory also ships a [`naming.full.yaml`](examples/basic01/naming.full.yaml) — an annotated reference covering every configurable key of the schema, not wired into `main.tf`, meant as a copy-paste starting point for a fully custom convention.
+Each example directory also ships a [`naming.full.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.full.yaml) — an annotated reference covering every configurable key of the schema, not wired into `main.tf`, meant as a copy-paste starting point for a fully custom convention.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/LemurDaniel/terraform-random-naming/blob/main/LICENSE)
