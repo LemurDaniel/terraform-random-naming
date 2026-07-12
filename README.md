@@ -1,21 +1,46 @@
 
 # Terraform Naming Generator Module
 
-<div align="center">
-
-<br><br>
-
 [![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-LemurDaniel%2Fnaming%2Frandom-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://registry.terraform.io/modules/LemurDaniel/naming/random/latest)
 
 ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 ![Azure](https://img.shields.io/badge/Azure-0089D6?style=for-the-badge&logo=microsoftazure&logoColor=white)
 ![YAML](https://img.shields.io/badge/YAML-CB171E?style=for-the-badge&logo=yaml&logoColor=white)
 
-</div>
+<br>
 
 A consistent, schema-driven approach to resource naming in Terraform.
 
 📖 For more info and examples, see this module on [GitHub](https://github.com/LemurDaniel/terraform-random-naming) — or ask Claude with the link to the module.
+
+---
+
+## 🙏 Acknowledgments
+
+- 🟣 **HashiCorp** for [Terraform](https://www.terraform.io/) and the amazing IaC tooling
+- ☁️ **Microsoft** for [Azure](https://azure.microsoft.com/) and the extensive resource provider ecosystem
+- 🔤 **CAF Naming Conventions** for the abbreviation guidelines this module is built around
+- 💖 **Open Source** contributors and the Azure community for inspiration
+
+---
+
+## Why This Module?
+
+- **Centralized Naming** — maintain conventions in one place, not scattered across modules.
+- **Consistency** — all resources follow the same logic, regardless of provider or type.
+- **Extensible** — add abbreviations, locations, or patterns without touching existing code.
+- **Index-based Naming** — generate a full set of sequentially named resources in a single call.
+- **YAML-driven** — swap the entire schema between environments without changing any resource code.
+
+---
+
+## Examples
+
+Full runnable configurations live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples), each pairing `naming-schema` with `naming-generator`:
+
+- [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) — a custom YAML override (`index_modifier: 0`) and generating a single name.
+- [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
+- [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
 
 ```hcl
 module "schema" {
@@ -123,32 +148,13 @@ abbreviations:
 > [!NOTE]
 > For a fully annotated reference covering every configurable key, see [`naming.full.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.full.yaml).
 
----
-
-## 🙏 Acknowledgments
-
-- 🟣 **HashiCorp** for [Terraform](https://www.terraform.io/) and the amazing IaC tooling
-- ☁️ **Microsoft** for [Azure](https://azure.microsoft.com/) and the extensive resource provider ecosystem
-- 🔤 **CAF Naming Conventions** for the abbreviation guidelines this module is built around
-- 💖 **Open Source** contributors and the Azure community for inspiration
-
----
-
-## Why This Module?
-
-- **Centralized Naming** — maintain conventions in one place, not scattered across modules.
-- **Consistency** — all resources follow the same logic, regardless of provider or type.
-- **Extensible** — add abbreviations, locations, or patterns without touching existing code.
-- **Index-based Naming** — generate a full set of sequentially named resources in a single call.
-- **YAML-driven** — swap the entire schema between environments without changing any resource code.
-
----
-
 ## 🚀 Quick Start
 
 This module (the *generator*) renders names from a schema object. The schema itself comes from the companion [`naming-schema`](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) module, which loads and merges the YAML naming convention (patterns, abbreviations, mappings, settings).
 
 Reference both from the [Terraform Registry](https://registry.terraform.io/modules/LemurDaniel/naming/random), pinning a version:
+
+Declare `naming-schema` **once** per configuration, then pass its output (`module.schema`) to every `naming-generator` call:
 
 ```hcl
 module "schema" {
@@ -175,33 +181,6 @@ output "storage_account_name" {
   value = module.naming_storage_account.name  # "stwedevmyapp01"
 }
 ```
-
-> [!NOTE]
-> Full runnable examples live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples): [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) (index ranges), [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) (`naming_id` variants), [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) (AzureAD resources).
->
-> The `naming.yaml` referenced above is a custom override on top of the bundled `default` convention — see [`naming.basic.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.basic.yaml) in the top example above for what it actually contains.
-
-Declare `naming-schema` **once** per configuration, then pass its output (`module.schema`) to every `naming-generator` call:
-
-```hcl
-module "rg_naming" {
-  source   = "LemurDaniel/naming/random"
-  version  = "~> 1.0"
-
-  schema   = module.schema
-  resource = "Azure::Microsoft.Resources/resourceGroups"
-}
-
-module "vnet_naming" {
-  source   = "LemurDaniel/naming/random"
-  version  = "~> 1.0"
-
-  schema   = module.schema
-  resource = "Azure::Microsoft.Network/virtualNetworks"
-}
-```
-
-See the [naming-schema README](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) for the two ways to configure the schema (bundled convention vs. custom YAML).
 
 ### Basic Resource Naming
 
@@ -473,17 +452,6 @@ Any parameter passed via `schema` (`default_parameters`) or the generator's own 
 | `by_index` | Alias for `at_index`. |
 | `index` | Alias for `at_index`. |
 
----
-
-## Examples
-
-Full runnable configurations live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples), each pairing `naming-schema` with `naming-generator`:
-
-- [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) — a custom YAML override (`index_modifier: 0`) and generating a single name.
-- [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
-- [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
-
-Each example directory also ships a [`naming.full.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.full.yaml) — an annotated reference covering every configurable key of the schema, not wired into `main.tf`, meant as a copy-paste starting point for a fully custom convention.
 
 ## License
 
