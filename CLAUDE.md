@@ -6,45 +6,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a schema-driven Terraform module for generating consistent Azure resource names following Microsoft's Cloud Adoption Framework (CAF) conventions. A YAML schema drives all naming logic — patterns, abbreviations, mappings, and settings — so new resource types can be added without changing HCL.
 
+## Repository Layout
+
+**The repository root *is* the module** — the name generator, published on the Terraform Registry as [`LemurDaniel/naming/random`](https://registry.terraform.io/modules/LemurDaniel/naming/random). There are no submodules under `modules/`.
+
+| Path | Purpose |
+|---|---|
+| `variables.tf`, `outputs.tf` | The module's public interface |
+| `locals.parameter.tf` | Parses the `resource` identifier; resolves abbreviation, lower-case setting and parameter mappings |
+| `locals.pattern.tf` | Resolves the pattern and splits it into typed components |
+| `locals.generate.tf` | Renders the components into the final name(s) |
+| `tests/` | Hermetic tests — literal schema object, no network |
+| `tests-integration/` | Tests against the published schema module — needs network |
+| `examples/basic01..03/` | Runnable scratchpad configs, not consumable modules |
+
+The companion **schema** module lives in a **separate repository**, `terraform-random-naming-schema` (published as `LemurDaniel/naming-schema/random`, default branch `master`). It owns `convention/default.naming.yaml` and merges a caller's YAML over it. This repo consumes its output as the `schema` input. Changes that span both repos are separate commits in separate repos, and the schema side is released first.
+
 ## Commands
 
 ```bash
-# Run all tests (requires Terraform 1.8+)
+# Hermetic suite (requires Terraform 1.8+)
+terraform init -backend=false
 terraform test
 
-# Run tests in a specific module
-terraform test -chdir=modules/naming-generator
+# Cross-repo suite against the published schema module.
+# NOTE: the flag is needed on `init` too, or the run fails with "Module not installed".
+terraform init -backend=false -test-directory=tests-integration
+terraform test -test-directory=tests-integration
 
-# Initialize before first use
-terraform init
+terraform fmt -check -recursive
+terraform validate
 ```
 
-## Module Architecture
+## Skills
 
-Three modules compose the system:
+Repository workflows live in `.claude/skills/` — read the relevant one before acting:
 
-**`modules/naming-schema/`** — Loads and merges YAML naming conventions. Accepts a built-in convention name (`"default"`) or raw YAML as a string, plus a `parameters` map (location, environment, name, etc.). Outputs the full resolved schema object (abbreviations, patterns, mappings, settings) that naming-generator consumes.
+- **`release`** — cutting a version and tagging it for the Registry
+- **`git-commit-conventions`** — commit format and the no-attribution rule
+- **`terraform-tests`** — writing and fixing `.tftest.hcl` tests
 
-**`modules/naming-generator/`** — Consumes a schema object and a `resource` identifier string to produce one or more names. Key inputs:
-- `schema` — output of naming-schema
-- `resource` — format `"Provider::Type::kind"` (e.g., `"Azure::Microsoft.Compute/disks::os"`)
-- `naming_id` — optional variant selector for alternate patterns/abbreviations
-- `index` / `index_end` — range for generating multiple names
+## Module Interface
 
-**`modules/resourceGroup/`** — Example consumer module; builds an `azurerm_resource_group` using `naming-generator`, kept in sync with its variable/output structure.
+- `schema` *(required)* — the resolved schema object, i.e. the output of the `naming-schema` module. Every attribute is required, so a test fixture must supply all of them.
+- `resource` *(required)* — `"Provider::Namespace/Type::kind"`, e.g. `"Azure::Microsoft.Compute/disks::os"`. `kind` is optional and defaults to `default`.
+- `naming_id` — variant selector; takes precedence over `kind`.
+- `index` — `{ start, count }`. `count` is **how many names** to generate; `start` is the first index.
+- `parameters` — merged on top of the schema's `default_parameters` for this call.
 
-The repository root has no root module — this is a Terraform Registry module published as a collection of submodules under `modules/`, per the [standard module structure](https://developer.hashicorp.com/terraform/registry/modules/publish#standard-module-structure). `examples/basic01/`, `examples/basic02/`, `examples/basic03/` are runnable scratchpad configs exercising the modules together, not consumable modules themselves.
-
-## Naming Schema YAML
-
-The default schema lives at `modules/naming-schema/convention/default.naming.yaml`. It has four top-level keys:
-
-- **`settings`** — global defaults (`separator`, `enforce_lower_case`, `index_modifier: 1` so indices start at 01)
-- **`abbreviations`** — per resource type/kind/naming_id abbreviation strings; also carries `enforce_lower_case` and `separator` overrides
-- **`patterns`** — per resource type/kind/naming_id pattern strings; falls back up the hierarchy to a global default
-- **`mappings`** — case-insensitive lookup tables (e.g., "West Europe" → "euwe", "development" → "dev")
-
-To add a new Azure resource type, add entries under `abbreviations` and optionally `patterns`.
+Outputs: `name` / `result` (first name), `at_index` / `by_index` / `index` (all names), and `debug` (resolved pattern components).
 
 ## Pattern Token Syntax
 
@@ -55,26 +65,48 @@ Patterns use angle-bracket tokens rendered by `locals.generate.tf`:
 | `<PARAM>` | Required parameter — errors if missing |
 | `<?PARAM;-separator%s>` | Optional parameter with inline separator |
 | `<PARAM;%02s>` | Printf-formatted parameter |
-| `<TYPE>` | Resolved abbreviation for the resource |
+| `<TYPE>` | Resolved abbreviation for the resource (also `<ABBREVIATION>`) |
+| `<NAMING_ID>` | The `naming_id`, falling back to `kind` |
 | `<INDEX;%02s>` | Numeric index (shifted by `index_modifier`) |
 | `<UNIQUE_ID_n>` | First *n* chars of a random UUID |
 
+Put separators **inside** optional tokens (`<?SUBNAME;-%s>`), or a missing parameter leaves a stray separator.
+
 ## Resolution Hierarchy
 
-Both abbreviations and patterns resolve via the same cascade:
+Abbreviations (`locals.parameter.tf`) — first match wins:
 
-1. `resource_type::naming_id` (most specific)
-2. `resource_type::kind`
-3. `resource_type::default`
-4. `resource_type` (bare)
-5. Provider-level default → global default (patterns only)
+1. `<type>::<naming_id>`
+2. `<type>::<kind>`
+3. `<type>::default`
+4. `<type>`
 
-`resource` identifier parsing happens in `locals.parameter.tf`: `Provider::Namespace/type::kind` splits into provider, resource type, and kind.
+Patterns (`locals.pattern.tf`), looked up under `patterns.<provider>` — first match wins:
 
-## Tests
+1. `<type>.<naming_id>`
+2. `<type>.<kind>`
+3. `<type>.default`
+4. `<provider>.default`
+5. `patterns.default`
 
-Tests use the Terraform 1.8+ native test framework (`.tftest.hcl`). The three test files in `modules/naming-generator/tests/` cover vnet, subnet, and storage account naming (the latter verifies no-separator behavior). Add new `.tftest.hcl` files there for new resource types.
+Lower-case enforcement resolves `<provider>.<type pattern>` (with `*` expanded to `.*`) → `<provider>.default` → `default`. The bundled convention sets `default: true`, so names are lower-cased unless a convention overrides it.
+
+## Gotchas
+
+- **`index_modifier` shifts every index.** The default convention uses `1`, so the first name ends in `01`. Expected names in tests and docs are wrong most often because of this.
+- **`output.at_index` is a tuple, not a list** — comparing it to a list literal fails on type even when the elements match, including via `tolist()`. Compare joined strings and assert the length separately.
+- **Never document a generated name you have not rendered.** Point a scratch config at the local module path and apply it.
+- **A literal `--` in a finished name is collapsed to `-`**, which masks a missing optional-token separator.
+- **A missing abbreviation fails the plan** rather than rendering an empty `<TYPE>`.
 
 ## Updating Abbreviations
 
-`modules/naming-schema/generate.ps1` scrapes Microsoft's CAF documentation to regenerate abbreviations in the YAML. Run it in PowerShell when Microsoft updates their naming recommendations.
+The abbreviations live in `convention/default.naming.yaml` in the **schema** repository and are currently maintained by hand against Microsoft's [CAF abbreviation list](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations).
+
+A `generate.ps1` that scraped that page used to exist at `modules/naming-schema/generate.ps1` in **this** repo. It was deleted in `e0f27f8` ("remove unecessery files") when the schema moved to its own repository, and was never carried over — the schema repo's history starts fresh. It is recoverable if wanted:
+
+```bash
+git show e0f27f8^:modules/naming-schema/generate.ps1
+```
+
+Do not reference it as if it were present in either working tree.

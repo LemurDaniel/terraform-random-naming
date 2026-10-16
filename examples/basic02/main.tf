@@ -31,7 +31,7 @@
 
 module "schema" {
   source  = "LemurDaniel/naming-schema/random"
-  version = "~> 1.0"
+  version = ">= 1.1.0"
 
   naming = yamldecode(file("${path.module}/naming.basic.yaml"))
   parameters = {
@@ -43,7 +43,7 @@ module "schema" {
 
 module "naming_storage_account" {
   source  = "LemurDaniel/naming/random"
-  version = "~> 1.0"
+  version = ">= 2.0.0"
 
   schema    = module.schema
   resource  = "Azure::Microsoft.Storage/storageAccounts::vm"

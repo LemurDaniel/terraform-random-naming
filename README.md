@@ -28,26 +28,24 @@ A consistent, schema-driven approach to resource naming in Terraform.
 
 - **Centralized Naming** — maintain conventions in one place, not scattered across modules.
 - **Consistency** — all resources follow the same logic, regardless of provider or type.
-- **Extensible** — add abbreviations, locations, or patterns without touching existing code.
+- **Extensible** — add abbreviations, locations, or patterns in YAML, without touching any HCL.
 - **Index-based Naming** — generate a full set of sequentially named resources in a single call.
 - **YAML-driven** — swap the entire schema between environments without changing any resource code.
 
 ---
 
-## Examples
+## 🚀 Quick Start
 
-Full runnable configurations live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples), each pairing `naming-schema` with `naming-generator`:
+This module (the *generator*) renders names from a schema object. The schema itself comes from the companion [`naming-schema`](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) module, which loads and merges the YAML naming convention (patterns, abbreviations, mappings, settings).
 
-- [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) — a custom YAML override (`index_modifier: 0`) and generating a single name.
-- [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
-- [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
+Declare `naming-schema` **once** per configuration, then pass it to every generator call. Both modules come from the [Terraform Registry](https://registry.terraform.io/modules/LemurDaniel/naming/random) and should be pinned to a version:
 
 ```hcl
 module "schema" {
   source  = "LemurDaniel/naming-schema/random"
-  version = "~> 1.0"
+  version = ">= 1.1.0"
 
-  naming     = yamldecode(file("${path.root}/naming.yaml"))
+  # Omitting `naming` entirely uses the bundled "default" convention.
   parameters = {
     location    = "westeurope"
     environment = "development"
@@ -55,70 +53,179 @@ module "schema" {
   }
 }
 
-module "storage_account_naming" {
+module "naming_storage_account" {
   source  = "LemurDaniel/naming/random"
-  version = "~> 1.0"
+  version = ">= 2.0.0"
 
   schema   = module.schema
   resource = "Azure::Microsoft.Storage/storageAccounts"
 }
 
 output "storage_account_name" {
-  value = module.storage_account_naming.name  # "stwedevmyapp01"
+  value = module.naming_storage_account.name  # "stwedevmyapp01"
 }
 ```
 
-Naming conventions are just YAML. The `naming.yaml` loaded above looks like this (`naming.basic.yaml`, see [GitHub](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.basic.yaml) if this link doesn't render):
+> [!NOTE]
+> All names on this page assume the bundled `default` convention, which sets `index_modifier: 1` — so the first index renders as `01`. The examples under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples) override this to `0` where noted, and then render `00`.
 
-```yaml
-# Custom override on top of the "default" convention.
-#
-# NOTE: `patterns` is replaced wholesale when set (no per-key fallback), so it
-# is copied here unmodified from modules/naming-schema/convention/default.naming.yaml.
-# `index_modifier` below is the actual override this example demonstrates:
-# indices now start at 00 instead of 01.
+> [!IMPORTANT]
+> **Version requirements.** This page and the examples require **`naming-schema` >= 1.1.0**, which merges a custom YAML convention per key over the bundled default — earlier versions replaced `patterns` wholesale, so a partial convention produced no patterns at all. They also require **`naming` (this module) >= 2.0.0**, where `index.count` is the number of names to generate rather than the range's exclusive upper bound. Both are stated as minimums rather than `~>` so it is explicit what the examples depend on; pin them with `~>` in your own configuration.
 
-index_modifier: 0
+### Basic Resource Naming
 
-patterns:
-  default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>-<UNIQUE_ID_4>"
+```hcl
+module "disk_naming" {
+  source  = "LemurDaniel/naming/random"
+  version = ">= 2.0.0"
 
-  AzureAD:
-    default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
+  schema   = module.schema
+  resource = "Azure::Microsoft.Compute/disks::os"
+}
 
-  Azure:
-    default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME><?SUBNAME;-%s>-<INDEX;%02s>"
-
-    Microsoft.Compute/virtualMachines:
-      default: "<TYPE><ENVIRONMENT><NAME><INDEX;%02s>"
-
-    Microsoft.ContainerRegistry/registries:
-      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
-
-    Microsoft.Resources/resourceGroups:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.Network/virtualNetworks:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.Network/virtualNetworks/subnets:
-      default: "<TYPE>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.Network/publicIPAddresses:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.Network/networkSecurityGroups:
-      default: "<TYPE>-<LOCATION>-<ENVIRONMENT>-<NAME>-<INDEX;%02s>"
-
-    Microsoft.KeyVault/vaults:
-      default: "<TYPE>-<ENVIRONMENT>-<NAME>-<UNIQUE_ID_4>"
-
-    Microsoft.Storage/storageAccounts:
-      default: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
-      vm_pattern: "<TYPE><LOCATION><ENVIRONMENT><NAME><INDEX;%02s>"
+output "disk_name" {
+  value = module.disk_naming.name  # "osdisk-we-dev-myapp-01"
+}
 ```
 
-This example only overrides `patterns` and `index_modifier` — `mappings` and `abbreviations` fall back to the bundled `default` convention (from [`convention/default.naming.yaml`](https://github.com/LemurDaniel/terraform-random-naming-schema/blob/master/convention/default.naming.yaml) in the companion [`terraform-random-naming-schema`](https://github.com/LemurDaniel/terraform-random-naming-schema) repository), which looks like this:
+### Kind-based Differentiation
+
+Use `::kind` to give the same resource type different abbreviations depending on how it is used:
+
+```hcl
+module "disk_os" {
+  source   = "LemurDaniel/naming/random"
+  version  = ">= 2.0.0"
+  schema   = module.schema
+  resource = "Azure::Microsoft.Compute/disks::os"    # abbreviation: osdisk
+}
+
+module "disk_data" {
+  source   = "LemurDaniel/naming/random"
+  version  = ">= 2.0.0"
+  schema   = module.schema
+  resource = "Azure::Microsoft.Compute/disks::data"  # abbreviation: disk
+}
+```
+
+### Picking a Variant via `naming_id`
+
+`naming_id` selects an abbreviation and pattern by a specific identifier, taking precedence over the `::kind` on the resource string ([examples/basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02)):
+
+```hcl
+module "vm_storage" {
+  source    = "LemurDaniel/naming/random"
+  version   = ">= 2.0.0"
+
+  schema    = module.schema
+  resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
+  naming_id = "vm_pattern"
+}
+
+output "vm_storage_name" {
+  value = module.vm_storage.name  # "stvmwedevmyapp01"
+}
+```
+
+Two independent lookups happen here, both keyed on `vm_pattern` first: the **abbreviation**
+falls back to `storageAccounts::vm` → `stvm`, while the **pattern** matches the type's
+`vm_pattern` key. [examples/basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02)
+overrides that pattern to drop `<ENVIRONMENT>` and so renders `stvmwetest01` instead.
+
+### Multiple Names via Index
+
+`index.count` is **how many names to generate**; `index.start` is the first index:
+
+```hcl
+module "vm_naming" {
+  source  = "LemurDaniel/naming/random"
+  version = ">= 2.0.0"
+
+  schema   = module.schema
+  resource = "Azure::Microsoft.Compute/virtualMachines"
+
+  index = {
+    start = 0
+    count = 5  # 5 names: vmdevmyapp01 through vmdevmyapp05
+  }
+}
+
+output "vm_names" {
+  value = module.vm_naming.by_index
+}
+```
+
+`start` shifts the first index on top of `index_modifier`, and `count` is unaffected by it —
+`{ start = 2, count = 5 }` yields five names numbered `03` through `07`.
+
+### Other Providers (e.g. AzureAD)
+
+The `resource` string is provider-agnostic — anything defined under `abbreviations`/`patterns` in the schema works, not just `Azure::...` ([examples/basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03)):
+
+```hcl
+module "aad_group" {
+  source   = "LemurDaniel/naming/random"
+  version  = ">= 2.0.0"
+
+  schema   = module.schema
+  resource = "AzureAD::Groups::security"
+}
+
+output "aad_group_name" {
+  value = module.aad_group.name  # "grp-dev-myapp-01"
+}
+```
+
+---
+
+## Examples
+
+Full runnable configurations live under [examples/](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples), each pairing the `naming-schema` module with this generator:
+
+- [basic01](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic01) — a custom YAML override (`index_modifier: 0`) and generating a single name.
+- [basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02) — using `naming_id` to select an alternate abbreviation/pattern for the same resource type.
+- [basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03) — naming `AzureAD` resources (groups, applications), which have no `<LOCATION>` token.
+
+Naming conventions are just YAML. Pass one into `naming-schema` via its `naming` input:
+
+```hcl
+module "schema" {
+  source  = "LemurDaniel/naming-schema/random"
+  version = ">= 1.1.0"
+
+  naming = yamldecode(file("${path.root}/naming.yaml"))
+  parameters = {
+    location    = "westeurope"
+    environment = "development"
+    name        = "myapp"
+  }
+}
+```
+
+**Every key is merged per entry over the bundled `default` convention, and your value wins.** So a `naming.yaml` only contains what actually differs — `basic01`'s is one line:
+
+```yaml
+index_modifier: 0
+```
+
+Overriding a single pattern leaves every other pattern in place (`basic03`):
+
+```yaml
+patterns:
+  AzureAD:
+    default: "<TYPE>-<NAME>-<ENVIRONMENT>-<INDEX;%02s>"
+```
+
+The same applies at the resource-type level — this adds a variant without touching the type's `default` pattern (`basic02`):
+
+```yaml
+patterns:
+  Azure:
+    Microsoft.Storage/storageAccounts:
+      vm_pattern: "<TYPE><LOCATION><NAME><INDEX;%02s>"
+```
+
+Everything you don't override comes from the bundled `default` convention ([`convention/default.naming.yaml`](https://github.com/LemurDaniel/terraform-random-naming-schema/blob/master/convention/default.naming.yaml) in the companion [`terraform-random-naming-schema`](https://github.com/LemurDaniel/terraform-random-naming-schema) repository), which looks like this:
 
 ```yaml
 mappings:
@@ -145,136 +252,20 @@ abbreviations:
     # ... the full set of CAF resource abbreviations
 ```
 
+Add an abbreviation or a region the same way — a single entry, merged in on top:
+
+```yaml
+abbreviations:
+  Azure:
+    Microsoft.Storage/storageAccounts::backup: stbkp
+
+mappings:
+  location:
+    germanywestcentral: gwc
+```
+
 > [!NOTE]
 > For a fully annotated reference covering every configurable key, see [`naming.full.yaml`](https://github.com/LemurDaniel/terraform-random-naming/blob/main/examples/basic01/naming.full.yaml).
-
-## 🚀 Quick Start
-
-This module (the *generator*) renders names from a schema object. The schema itself comes from the companion [`naming-schema`](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) module, which loads and merges the YAML naming convention (patterns, abbreviations, mappings, settings).
-
-Reference both from the [Terraform Registry](https://registry.terraform.io/modules/LemurDaniel/naming/random), pinning a version:
-
-Declare `naming-schema` **once** per configuration, then pass its output (`module.schema`) to every `naming-generator` call:
-
-```hcl
-module "schema" {
-  source  = "LemurDaniel/naming-schema/random"
-  version = "~> 1.0"
-
-  naming     = yamldecode(file("${path.root}/naming.yaml"))
-  parameters = {
-    location    = "westeurope"
-    environment = "development"
-    name        = "myapp"
-  }
-}
-
-module "naming_storage_account" {
-  source  = "LemurDaniel/naming/random"
-  version = "~> 1.0"
-
-  schema   = module.schema
-  resource = "Azure::Microsoft.Storage/storageAccounts"
-}
-
-output "storage_account_name" {
-  value = module.naming_storage_account.name  # "stwedevmyapp01"
-}
-```
-
-### Basic Resource Naming
-
-```hcl
-module "disk_naming" {
-  source  = "LemurDaniel/naming/random"
-  version = "~> 1.0"
-
-  schema   = module.schema
-  resource = "Azure::Microsoft.Compute/disks::os"
-}
-
-output "disk_name" {
-  value = module.disk_naming.name  # "osdisk-we-dev-myapp"
-}
-```
-
-### Kind-based Differentiation
-
-Use `::kind` to give the same resource type different abbreviations depending on how it is used:
-
-```hcl
-module "disk_os" {
-  source   = "LemurDaniel/naming/random"
-  version  = "~> 1.0"
-  schema   = module.schema
-  resource = "Azure::Microsoft.Compute/disks::os"    # abbreviation: osdisk
-}
-
-module "disk_data" {
-  source   = "LemurDaniel/naming/random"
-  version  = "~> 1.0"
-  schema   = module.schema
-  resource = "Azure::Microsoft.Compute/disks::data"  # abbreviation: disk
-}
-```
-
-### Picking a Variant via `naming_id`
-
-`naming_id` selects an abbreviation and pattern by a specific identifier, taking precedence over the `::kind` on the resource string ([examples/basic02](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic02)):
-
-```hcl
-module "vm_storage" {
-  source    = "LemurDaniel/naming/random"
-  version   = "~> 1.0"
-
-  schema    = module.schema
-  resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
-  naming_id = "vm_pattern"
-}
-
-output "vm_storage_name" {
-  value = module.vm_storage.name  # "stvmwedevtest01"
-}
-```
-
-### Multiple Names via Index
-
-```hcl
-module "vm_naming" {
-  source  = "LemurDaniel/naming/random"
-  version = "~> 1.0"
-
-  schema   = module.schema
-  resource = "Azure::Microsoft.Compute/virtualMachines"
-
-  index = {
-    start = 0
-    count = 5  # generates vmdevmyapp01 through vmdevmyapp05
-  }
-}
-
-output "vm_names" {
-  value = module.vm_naming.by_index
-}
-```
-
-### Other Providers (e.g. AzureAD)
-
-The `resource` string is provider-agnostic — anything defined under `abbreviations`/`patterns` in the schema works, not just `Azure::...` ([examples/basic03](https://github.com/LemurDaniel/terraform-random-naming/tree/main/examples/basic03)):
-
-```hcl
-module "aad_group" {
-  source   = "LemurDaniel/naming/random"
-  version  = "~> 1.0"
-
-  schema   = module.schema
-  resource = "AzureAD::Groups::security"
-}
-
-output "aad_group_name" {
-  value = module.aad_group.name  # "grp-test-dev-01"
-}
-```
 
 ---
 
@@ -285,7 +276,7 @@ output "aad_group_name" {
 
 <br>
 
-Every `naming-generator` call expects a `resource` string in this shape:
+Every generator call expects a `resource` string in this shape:
 
 ```
 Provider::Namespace/Type::kind
@@ -316,10 +307,13 @@ Patterns are strings with placeholder tokens, resolved from `schema.patterns` an
 | `<PARAMETER>` | Required — fails if the parameter is missing |
 | `<?PARAMETER;-%s>` | Optional — the whole format (including any separator) is dropped when the parameter is missing |
 | `<PARAMETER;%02s>` | Format string — printf-style formatting |
-| `<TYPE>` | Resolved abbreviation for the resource |
+| `<TYPE>` | Resolved abbreviation for the resource (also available as `<ABBREVIATION>`) |
 | `<NAMING_ID>` | The `naming_id`, falling back to `kind`, for the current call |
 | `<INDEX;%02s>` | Numeric index, shifted by `index_modifier` and incremented across the index range |
 | `<UNIQUE_ID_n>` | First `n` characters of a random UUID (e.g. `<UNIQUE_ID_4>`) |
+
+Token names are matched case-insensitively against the available parameters, so any key from
+`parameters`/`default_parameters` can be referenced as `<MY_KEY>`.
 
 > [!IMPORTANT]
 > **Put separators _inside_ the optional placeholder.**
@@ -332,13 +326,13 @@ Patterns are strings with placeholder tokens, resolved from `schema.patterns` an
 >
 > # ❌ Wrong — leaves a stray "-" when SUBNAME is missing
 > default: "<TYPE>-<NAME>-<?SUBNAME;%s>-<INDEX;%02s>"
-> # Without SUBNAME     →  app-myapp--01  (double dash!)
+> # Without SUBNAME     →  app-myapp--01    (collapsed to app-myapp-01, but don't rely on it)
 > ```
 
-**Pattern resolution order** — first match wins:
+**Pattern resolution order** — first match wins, looked up under `patterns.<provider>`:
 
 ```
-resourceType::naming_id  →  resourceType::kind  →  resourceType::default  →  provider default  →  global default  →  error
+<type>.<naming_id>  →  <type>.<kind>  →  <type>.default  →  <provider>.default  →  patterns.default  →  error
 ```
 
 ```yaml
@@ -392,12 +386,14 @@ abbreviations:
     Microsoft.Storage/storageAccounts::vm:      stvm
 ```
 
-`naming_id` takes precedence over `kind` and is passed explicitly on the `naming-generator` call:
+If no entry matches, the module fails rather than guessing an abbreviation.
+
+`naming_id` takes precedence over `kind` and is passed explicitly on the generator call:
 
 ```hcl
 module "vm_storage" {
   source    = "LemurDaniel/naming/random"
-  version   = "~> 1.0"
+  version   = ">= 2.0.0"
   schema    = module.schema
   resource  = "Azure::Microsoft.Storage/storageAccounts::vm"
   naming_id = "vm_pattern"   # matches type::vm_pattern before falling back to type::vm (kind)
@@ -430,6 +426,32 @@ Any parameter passed via `schema` (`default_parameters`) or the generator's own 
 
 </details>
 
+<details>
+<summary><strong>🔡 Lower-case Enforcement</strong></summary>
+
+<br>
+
+`schema.enforce_lower_case` decides whether a finished name is lower-cased. It resolves per
+provider, with wildcard matching on the resource type:
+
+```
+<provider>.<type pattern>   →   <provider>.default   →   enforce_lower_case.default
+```
+
+```yaml
+enforce_lower_case:
+  default: true
+
+  Azure:
+    default: true
+    "Microsoft.Compute/virtualMachines*": false
+```
+
+The bundled `default` convention sets `default: true`, so **every** name is lower-cased unless a
+convention overrides it for the matching provider.
+
+</details>
+
 ---
 
 ## 📥 Inputs
@@ -439,7 +461,7 @@ Any parameter passed via `schema` (`default_parameters`) or the generator's own 
 | `schema` | `object` | Yes | The resolved schema, i.e. the output of the [`naming-schema`](https://registry.terraform.io/modules/LemurDaniel/naming-schema/random) module. |
 | `resource` | `string` | Yes | The resource identifier: `Provider::Namespace/Type::kind`. |
 | `naming_id` | `string` | No (default `""`) | Selects a specific abbreviation/pattern variant, taking precedence over `kind`. |
-| `index` | `object({ start, count })` | No (default `{ start = 0, count = 1 }`) | Range of indices to generate names for. |
+| `index` | `object({ start, count })` | No (default `{ start = 0, count = 1 }`) | `start` is the first index, `count` is how many names to generate (must be >= 1). |
 | `parameters` | `map(any)` | No (default `{}`) | Additional/overriding parameters merged on top of the schema's `default_parameters` for this call. |
 
 ## 📤 Outputs
@@ -451,7 +473,9 @@ Any parameter passed via `schema` (`default_parameters`) or the generator's own 
 | `at_index` | Array of names across the full `index` range. |
 | `by_index` | Alias for `at_index`. |
 | `index` | Alias for `at_index`. |
+| `debug` | The resolved pattern components — useful when a pattern doesn't render as expected. |
 
+---
 
 ## License
 
