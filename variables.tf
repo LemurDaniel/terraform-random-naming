@@ -31,7 +31,7 @@ variable "resource" {
 
 variable "index" {
   nullable    = false
-  description = "(optional) The index to use for naming. If not set, the default index is used."
+  description = "(optional) The index range to generate names for. 'start' is the first index, 'count' is how many names to generate."
   type = object({
     start = optional(number, 0)
     count = optional(number, 1)
@@ -39,6 +39,16 @@ variable "index" {
   default = {
     start = 0
     count = 1
+  }
+
+  validation {
+    condition     = var.index.count >= 1
+    error_message = "index.count must be at least 1 - it is the number of names to generate."
+  }
+
+  validation {
+    condition     = var.index.start >= 0
+    error_message = "index.start must not be negative."
   }
 }
 
@@ -51,31 +61,9 @@ variable "naming_id" {
   default     = ""
 }
 
-variable "location" {
-  nullable    = true
-  description = "(optional) The location to use for naming."
-  type        = string
-  default     = null
-}
-
 variable "parameters" {
   nullable    = false
   description = "(optional) The parameters to use for naming. Use 'override' to override the naming generation."
   type        = map(any)
   default     = {}
-}
-
-
-variable "extend_attribute" {
-  nullable    = false
-  description = "(Optional) Name of the attribute to add to the object."
-  type = string
-  default = "name"
-}
-
-variable "extend_object" {
-  nullable    = false
-  description = "(Optional) Extend an object with naming parameter."
-  type = any
-  default = {}
 }
