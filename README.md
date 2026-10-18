@@ -1,4 +1,10 @@
 
+> [!CAUTION]
+> ## ⚠️ This module is deprecated and no longer maintained
+>
+> It has been replaced by the **[LemurDaniel/naming Terraform provider](https://github.com/LemurDaniel/terraform-provider-naming)**.
+> Please migrate to the provider — this module receives no further fixes or features.
+
 # Terraform Naming Generator Module
 
 [![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-LemurDaniel%2Fnaming%2Frandom-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://registry.terraform.io/modules/LemurDaniel/naming/random/latest)
