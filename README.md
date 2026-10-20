@@ -17,6 +17,9 @@
 
 A consistent, schema-driven approach to resource naming in Terraform.
 
+> [!NOTE]
+> AI disclaimer: Originally written by hand, then improved with the help of AI. The module is covered by terraform test, and the examples are the same files the tests run against. 🤖
+
 📖 For more info and examples, see this module on [GitHub](https://github.com/LemurDaniel/terraform-random-naming) — or ask Claude with the link to the module.
 
 ---
