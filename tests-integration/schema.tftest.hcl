@@ -26,7 +26,7 @@
 run "schema" {
   module {
     source  = "LemurDaniel/naming-schema/random"
-    version = "1.1.0"
+    version = "1.1.1"
   }
 
   variables {
